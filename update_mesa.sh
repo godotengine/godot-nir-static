@@ -124,6 +124,7 @@ copy_sources() {
     # We still take the liberty to copy all the headers.
     copy_subir_headers src/util
     copy_file src/util blob.c
+    copy_file src/util bitscan.c
     copy_file src/util double.c
     copy_file src/util half_float.c
     copy_file src/util hash_table.c
@@ -165,11 +166,55 @@ tweak_gitignore() {
     check_error
 }
 
+custom_source_gen() {
+    run_step() {
+        local P_SUBDIR=$1
+        local P_SCRIPT_PLUS_ARGS=$2
+        local P_REDIR_TARGET=$3
+
+        echo "Custom step: [$P_SUBDIR] $P_SCRIPT_PLUS_ARGS"
+
+        local OUTDIR=$GODOT_DIR/godot-mesa/$P_SUBDIR
+        local GENDIR=$GODOT_DIR/godot-mesa/generated/$P_SUBDIR
+        mkdir -p $GENDIR
+        check_error
+        pushd $OUTDIR > /dev/null
+        check_error
+        eval "local COMMAND=\"$P_SCRIPT_PLUS_ARGS\""
+        if [ ! -z "$P_REDIR_TARGET" ]; then
+            eval "TARGET=\"$P_REDIR_TARGET\""
+            python3 $COMMAND > $GENDIR/$TARGET
+        else
+            python3 $COMMAND
+        fi
+        check_error
+        popd > /dev/null
+        check_error
+    }
+   
+    run_step 'src/compiler' 'glsl/ir_expression_operation.py enum' 'ir_expression_operation.h'
+    run_step 'src/compiler/nir' 'nir_builder_opcodes_h.py' 'nir_builder_opcodes.h'
+    run_step 'src/compiler/nir' 'nir_constant_expressions.py' 'nir_constant_expressions.c'
+    run_step 'src/compiler/nir' 'nir_intrinsics_h.py --outdir $GENDIR'
+    run_step 'src/compiler/nir' 'nir_intrinsics_c.py --outdir $GENDIR'
+    run_step 'src/compiler/nir' 'nir_intrinsics_indices_h.py --outdir $GENDIR'
+    run_step 'src/compiler/nir' 'nir_opcodes_h.py' 'nir_opcodes.h'
+    run_step 'src/compiler/nir' 'nir_opcodes_c.py' 'nir_opcodes.c'
+    run_step 'src/compiler/nir' 'nir_opt_algebraic.py' 'nir_opt_algebraic.c'
+    run_step 'src/compiler/spirv' 'vtn_generator_ids_h.py spir-v.xml $GENDIR/vtn_generator_ids.h'
+    run_step 'src/microsoft/compiler' 'dxil_nir_algebraic.py -p ../../../src/compiler/nir' 'dxil_nir_algebraic.c'
+    run_step 'src/util' 'format_srgb.py' 'format_srgb.c'
+    run_step 'src/util/format' 'u_format_table.py u_format.csv --header' 'u_format_pack.h'
+    run_step 'src/util/format' 'u_format_table.py u_format.csv' 'u_format_table.c'
+}
+
 
 GODOT_DIR=$(pwd)
 
-echo "Clearing godot-mesa/"
-find godot-mesa -mindepth 1 -type d | xargs rm -rf
+if [ -d ./godot-mesa ]; then
+    echo "Clearing godot-mesa/"
+    find godot-mesa -mindepth 1 -type d | xargs rm -rf
+fi
 
 run_custom_steps_at_source
 copy_custom_steps_sources
@@ -181,3 +226,5 @@ if [ -d ./godot-patches ]; then
     echo "Applying patches"
     find ./godot-patches -name '*.patch' -exec git apply {} \;
 fi
+
+custom_source_gen

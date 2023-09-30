@@ -230,11 +230,6 @@ for v in custom_build_steps:
     script_filename = cmd.split()[0]
     out_full_path = mesa_dir + "/generated/" + subdir
     out_file_full_path = out_full_path + "/" + gen_filename
-    env.Command(
-        out_file_full_path,
-        mesa_dir + "/" + subdir + "/" + script_filename,
-        ["cd " + in_dir + " && python " + (cmd % (out_dir))],
-    )
 
     if gen_filename.endswith(".h"):
         mesa_gen_include_paths += [out_full_path]
@@ -288,7 +283,6 @@ extra_defines += [
     ("PACKAGE_BUGREPORT", '\\"https://gitlab.freedesktop.org/mesa/mesa/-/issues\\"'),
     "PIPE_SUBSYSTEM_WINDOWS_USER",
     "_USE_MATH_DEFINES",
-    ("_Static_assert", "static_assert"),
 ]
 
 if env.get("is_msvc", False):
@@ -303,12 +297,14 @@ if env.get("is_msvc", False):
         ("_HAS_EXCEPTIONS", 0),
         "NOMINMAX",
         "HAVE_STRUCT_TIMESPEC",
+        ("_Static_assert", "static_assert"),
     ]
     env.Append(CFLAGS=["/std:c11"])
 else:
     env.Append(
         CPPDEFINES=[
             ("__MSVCRT_VERSION__", 0x0700),
+            "HAVE_STRUCT_TIMESPEC",
         ]
     )
     env.Append(CFLAGS=["-std=c11"])
