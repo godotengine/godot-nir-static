@@ -647,6 +647,55 @@ index ca170c5d2f..7fab628a22 100644
  };
  
  struct dxil_instr;
+diff --git a/godot-mesa/src/microsoft/compiler/dxil_validator.cpp b/godot-mesa/src/microsoft/compiler/dxil_validator.cpp
+index 4b68957a7d..a926ec991b 100644
+--- a/godot-mesa/src/microsoft/compiler/dxil_validator.cpp
++++ b/godot-mesa/src/microsoft/compiler/dxil_validator.cpp
+@@ -25,6 +25,7 @@ struct dxil_validator {
+ 
+ extern "C" {
+ extern IMAGE_DOS_HEADER __ImageBase;
++extern char godot_nir_arch_name[32];
+ }
+ 
+ static HMODULE
+@@ -36,7 +37,10 @@ load_dxil_mod()
+ #elif defined (_GAMING_XBOX)
+    HMODULE mod = LoadLibraryA("dxcompiler_x.dll");
+ #else
+-   HMODULE mod = LoadLibraryA("DXIL.dll");
++   HMODULE mod = NULL;
++   if (!godot_nir_arch_name[0]) {
++      mod = LoadLibraryA("DXIL.dll");
++   }
+ #endif
+    if (mod)
+       return mod;
+@@ -60,12 +64,23 @@ load_dxil_mod()
+    }
+ 
+    *(last_slash + 1) = '\0';
++
++   if (godot_nir_arch_name[0]) {
++      strcat_s(self_path, godot_nir_arch_name);
++      strcat_s(self_path, "\\");
++   }
++
+    if (strcat_s(self_path, "DXIL.dll") != 0) {
+       debug_printf("DXIL: Unable to get path to DXIL.dll next to self");
+       return NULL;
+    }
+ 
+-   return LoadLibraryA(self_path);
++   mod = LoadLibraryA(self_path);
++   if (mod)
++      return mod;
++
++   godot_nir_arch_name[0] = '\0';
++   return load_dxil_mod();
+ }
+ 
+ static IDxcValidator *
 diff --git a/godot-mesa/src/microsoft/compiler/nir_to_dxil.c b/godot-mesa/src/microsoft/compiler/nir_to_dxil.c
 index 245c5140f9..d6c9d06c30 100644
 --- a/godot-mesa/src/microsoft/compiler/nir_to_dxil.c
