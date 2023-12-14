@@ -279,7 +279,7 @@ extra_defines += [
     "__STDC_CONSTANT_MACROS",
     "__STDC_FORMAT_MACROS",
     "__STDC_LIMIT_MACROS",
-    ("PACKAGE_VERSION", '\\"' + Path(mesa_absdir + "/VERSION").read_text().strip() + '\\"'),
+    ("PACKAGE_VERSION", '\\"' + Path(mesa_absdir + "/VERSION.info").read_text().strip() + '\\"'),
     ("PACKAGE_BUGREPORT", '\\"https://gitlab.freedesktop.org/mesa/mesa/-/issues\\"'),
     "PIPE_SUBSYSTEM_WINDOWS_USER",
     "_USE_MATH_DEFINES",
@@ -297,6 +297,7 @@ if env.get("is_msvc", False):
         ("_HAS_EXCEPTIONS", 0),
         "NOMINMAX",
         "HAVE_STRUCT_TIMESPEC",
+        "HAVE_TIMESPEC_GET",
         ("_Static_assert", "static_assert"),
     ]
     env.Append(CFLAGS=["/std:c11"])

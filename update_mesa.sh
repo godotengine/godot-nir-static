@@ -89,7 +89,6 @@ copy_sources() {
     }
 
     # These are the first we know for sure we want to copy.
-    copy_file . VERSION
     copy_file . .editorconfig
     copy_subir_sources src/microsoft/compiler
     copy_subir_sources src/microsoft/spirv_to_dxil
@@ -106,6 +105,7 @@ copy_sources() {
     copy_subir_headers include/KHR
     copy_subir_headers src/c11
     copy_file src/c11/impl threads_win32.*
+    copy_file src/c11/impl time.c
     copy_subir_sources src/compiler
     copy_subir_headers src/compiler/glsl
     copy_subir_sources src/compiler/nir
@@ -146,7 +146,7 @@ copy_sources() {
     copy_file src/util u_vector.c
     copy_file src/util u_worklist.c
 
-    cp ./mesa/VERSION godot-mesa
+    cp ./mesa/VERSION godot-mesa/VERSION.info
     check_error
 }
 
