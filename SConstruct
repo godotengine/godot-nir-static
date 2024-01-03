@@ -310,6 +310,12 @@ else:
     )
     env.Append(CFLAGS=["-std=c11"])
 
+if env.get("use_llvm", False):
+    extra_defines += [
+        "HAVE_TIMESPEC_GET",
+        "_UCRT",
+    ]
+
 env.Append(CPPDEFINES=extra_defines)
 env.Append(CPPPATH=".")
 env.Append(CPPPATH="#vulkan/include")
