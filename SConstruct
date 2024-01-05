@@ -112,6 +112,8 @@ opts.Add(
         map=architecture_aliases,
     )
 )
+opts.Add("defines", "A comma-separated list of defines to pass to the compiler, in the form of NAME or NAME=VALUE.")
+opts.Add("extra_suffix", "Custom extra suffix added to the base filename of all generated binary files.", "")
 
 # Targets flags tool (optimizations, debug symbols)
 target_tool = Tool("targets", toolpath=["godot-tools"])
@@ -310,11 +312,16 @@ else:
     )
     env.Append(CFLAGS=["-std=c11"])
 
+if env.get("defines", "") != "":
+    extra_defines += str(env["defines"]).split(',')
+
 env.Append(CPPDEFINES=extra_defines)
 env.Append(CPPPATH=".")
 env.Append(CPPPATH="#vulkan/include")
 
 suffix = ".{}.{}".format(env["platform"], env["arch"])
+if env.get("extra_suffix", "") != "":
+    suffix += "." + env["extra_suffix"]
 
 # Expose it when included from another project
 env["suffix"] = suffix
