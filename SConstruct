@@ -113,6 +113,13 @@ opts.Add(
     )
 )
 
+opts.Add("cppdefines", "Custom defines for the pre-processor")
+opts.Add("ccflags", "Custom flags for both the C and C++ compilers")
+opts.Add("cxxflags", "Custom flags for the C++ compiler")
+opts.Add("cflags", "Custom flags for the C compiler")
+opts.Add("linkflags", "Custom flags for the linker")
+opts.Add("extra_suffix", "Custom extra suffix added to the base filename of all generated binary files.", "")
+
 # Targets flags tool (optimizations, debug symbols)
 target_tool = Tool("targets", toolpath=["godot-tools"])
 target_tool.options(opts)
@@ -156,6 +163,12 @@ if unknown:
         print("    " + item[0] + "=" + item[1])
 
 print("Building for architecture " + env["arch"] + " on platform " + env["platform"])
+
+env.Append(CPPDEFINES=env.get("cppdefines", "").split())
+env.Append(CCFLAGS=env.get("ccflags", "").split())
+env.Append(CXXFLAGS=env.get("cxxflags", "").split())
+env.Append(CFLAGS=env.get("cflags", "").split())
+env.Append(LINKFLAGS=env.get("linkflags", "").split())
 
 # Require C++17
 if env.get("is_msvc", False):
@@ -321,6 +334,8 @@ env.Append(CPPPATH=".")
 env.Append(CPPPATH="#vulkan/include")
 
 suffix = ".{}.{}".format(env["platform"], env["arch"])
+if env.get("extra_suffix", "") != "":
+    suffix += "." + env["extra_suffix"]
 
 # Expose it when included from another project
 env["suffix"] = suffix
