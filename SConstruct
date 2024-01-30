@@ -322,6 +322,7 @@ else:
         ]
     )
     env.Append(CFLAGS=["-std=c11"])
+    env.Append(CXXFLAGS=["-fno-exceptions"])
 
 if env.get("use_llvm", False):
     extra_defines += [
