@@ -671,7 +671,7 @@ index 4b68957a7d..a926ec991b 100644
  #endif
     if (mod)
        return mod;
-@@ -60,12 +64,23 @@ load_dxil_mod()
+@@ -60,12 +64,27 @@ load_dxil_mod()
     }
  
     *(last_slash + 1) = '\0';
@@ -691,8 +691,12 @@ index 4b68957a7d..a926ec991b 100644
 +   if (mod)
 +      return mod;
 +
++   mod = LoadLibraryA("DXIL.dll");
++   if (mod)
++      return mod;
++
 +   godot_nir_arch_name[0] = '\0';
-+   return load_dxil_mod();
++   return nullptr;
  }
  
  static IDxcValidator *
