@@ -58,7 +58,7 @@ def generate(env):
                 env.AppendUnique(CCFLAGS=["/MD"])
         env.Append(LINKFLAGS=["/WX"])
 
-        if env["use_clang_cl"]:
+        if env["platform_tools"] and env["use_clang_cl"]:
             env["CC"] = "clang-cl"
             env["CXX"] = "clang-cl"
 
@@ -90,18 +90,19 @@ def generate(env):
         elif env["arch"] == "x86_32":
             prefix += "i686"
 
-        if env["use_llvm"]:
-            env["CXX"] = prefix + "-w64-mingw32-clang++"
-            env["CC"] = prefix + "-w64-mingw32-clang"
-            env["AR"] = prefix + "-w64-mingw32-ar"
-            env["RANLIB"] = prefix + "-w64-mingw32-ranlib"
-            env["LINK"] = prefix + "-w64-mingw32-clang"
-        else:
-            env["CXX"] = prefix + "-w64-mingw32-g++"
-            env["CC"] = prefix + "-w64-mingw32-gcc"
-            env["AR"] = prefix + "-w64-mingw32-gcc-ar"
-            env["RANLIB"] = prefix + "-w64-mingw32-ranlib"
-            env["LINK"] = prefix + "-w64-mingw32-g++"
+        if env["platform_tools"]:
+            if env["use_llvm"]:
+                env["CXX"] = prefix + "-w64-mingw32-clang++"
+                env["CC"] = prefix + "-w64-mingw32-clang"
+                env["AR"] = prefix + "-w64-mingw32-ar"
+                env["RANLIB"] = prefix + "-w64-mingw32-ranlib"
+                env["LINK"] = prefix + "-w64-mingw32-clang"
+            else:
+                env["CXX"] = prefix + "-w64-mingw32-g++"
+                env["CC"] = prefix + "-w64-mingw32-gcc"
+                env["AR"] = prefix + "-w64-mingw32-gcc-ar"
+                env["RANLIB"] = prefix + "-w64-mingw32-ranlib"
+                env["LINK"] = prefix + "-w64-mingw32-g++"
 
         env.Append(CPPDEFINES=["MINGW_ENABLED"])
         env.Append(CCFLAGS=["-O3", "-Wwrite-strings"])

@@ -17,13 +17,14 @@ def generate(env):
         print("Only universal, arm64, and x86_64 are supported on macOS. Exiting.")
         Exit()
 
-    if sys.platform == "darwin":
-        # Use clang on macOS by default
-        env["CXX"] = "clang++"
-        env["CC"] = "clang"
-    else:
-        # Use osxcross
-        macos_osxcross.generate(env)
+    if env["platform_tools"]:
+        if sys.platform == "darwin":
+            # Use clang on macOS by default
+            env["CXX"] = "clang++"
+            env["CC"] = "clang"
+        else:
+            # Use osxcross
+            macos_osxcross.generate(env)
 
     if env["arch"] == "universal":
         env.Append(LINKFLAGS=["-arch", "x86_64", "-arch", "arm64"])
