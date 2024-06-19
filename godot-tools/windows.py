@@ -78,8 +78,8 @@ def generate(env):
             prefix = "i686"
 
         if env["use_llvm"]:
-            env["CXX"] = prefix + "-w64-mingw32-clang"
-            env["CC"] = prefix + "-w64-mingw32-clang++"
+            env["CXX"] = prefix + "-w64-mingw32-clang++"
+            env["CC"] = prefix + "-w64-mingw32-clang"
             env["AR"] = prefix + "-w64-mingw32-ar"
             env["RANLIB"] = prefix + "-w64-mingw32-ranlib"
             env["LINK"] = prefix + "-w64-mingw32-clang"
