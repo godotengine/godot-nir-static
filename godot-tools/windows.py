@@ -7,11 +7,14 @@ from SCons.Variables import *
 
 
 def options(opts):
+    mingw = os.getenv("MINGW_PREFIX", "")
+
     opts.Add(BoolVariable("use_mingw", "Use the MinGW compiler instead of MSVC - only effective on Windows", False))
     opts.Add(BoolVariable("use_clang_cl", "Use the clang driver instead of MSVC - only effective on Windows", False))
     opts.Add(BoolVariable("use_static_cpp", "Link MinGW/MSVC C++ runtime libraries statically", True))
     opts.Add(BoolVariable("debug_crt", "Compile with MSVC's debug CRT (/MDd)", False))
     opts.Add(BoolVariable("use_llvm", "Use the LLVM compiler", False))
+    opts.Add("mingw_prefix", "MinGW prefix", mingw)
 
 
 def exists(env):
@@ -53,7 +56,7 @@ def generate(env):
             env["CC"] = "clang-cl"
             env["CXX"] = "clang-cl"
 
-    elif sys.platform == "win32" or sys.platform == "msys":
+    elif (sys.platform == "win32" or sys.platform == "msys") and not env["mingw_prefix"]:
         env["use_mingw"] = True
         mingw.generate(env)
         env.Append(CPPDEFINES=["MINGW_ENABLED"])
@@ -68,14 +71,18 @@ def generate(env):
     else:
         env["use_mingw"] = True
         # Cross-compilation using MinGW
+        prefix = ""
+        if env["mingw_prefix"]:
+            prefix = env["mingw_prefix"] + "/bin/"
+
         if env["arch"] == "x86_64":
-            prefix = "x86_64"
+            prefix += "x86_64"
         elif env["arch"] == "arm64":
-            prefix = "aarch64"
+            prefix += "aarch64"
         elif env["arch"] == "arm32":
-            prefix = "armv7"
+            prefix += "armv7"
         elif env["arch"] == "x86_32":
-            prefix = "i686"
+            prefix += "i686"
 
         if env["use_llvm"]:
             env["CXX"] = prefix + "-w64-mingw32-clang++"
@@ -105,3 +112,6 @@ def generate(env):
                 "-Wl,--no-undefined",
             ]
         )
+
+        if (sys.platform == "win32" or sys.platform == "msys"):
+            my_spawn.configure(env)
