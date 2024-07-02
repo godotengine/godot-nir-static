@@ -1,5 +1,5 @@
 diff --git a/godot-mesa/src/compiler/nir/nir_intrinsics.py b/godot-mesa/src/compiler/nir/nir_intrinsics.py
-index fcb8a9885c..54e199cc43 100644
+index 7474afb..119b832 100644
 --- a/godot-mesa/src/compiler/nir/nir_intrinsics.py
 +++ b/godot-mesa/src/compiler/nir/nir_intrinsics.py
 @@ -1046,6 +1046,9 @@ load("push_constant", [1], [BASE, RANGE, ALIGN_MUL, ALIGN_OFFSET], [CAN_ELIMINAT
@@ -13,7 +13,7 @@ index fcb8a9885c..54e199cc43 100644
  load("global", [1], [ACCESS, ALIGN_MUL, ALIGN_OFFSET], [CAN_ELIMINATE])
  # src[] = { address }.
 diff --git a/godot-mesa/src/compiler/spirv/spirv_to_nir.c b/godot-mesa/src/compiler/spirv/spirv_to_nir.c
-index 5cb7691506..7620fef9f5 100644
+index 6f87ff9..da61ec5 100644
 --- a/godot-mesa/src/compiler/spirv/spirv_to_nir.c
 +++ b/godot-mesa/src/compiler/spirv/spirv_to_nir.c
 @@ -39,6 +39,8 @@
@@ -41,7 +41,7 @@ index 5cb7691506..7620fef9f5 100644
     case SpvDecorationAliased:
     case SpvDecorationConstant:
     case SpvDecorationIndex:
-@@ -1938,7 +1940,7 @@ vtn_null_constant(struct vtn_builder *b, struct vtn_type *type)
+@@ -1942,7 +1944,7 @@ vtn_null_constant(struct vtn_builder *b, struct vtn_type *type)
  }
  
  static void
@@ -50,7 +50,7 @@ index 5cb7691506..7620fef9f5 100644
                              ASSERTED int member,
                              const struct vtn_decoration *dec, void *data)
  {
-@@ -1946,13 +1948,8 @@ spec_constant_decoration_cb(struct vtn_builder *b, UNUSED struct vtn_value *val,
+@@ -1950,13 +1952,8 @@ spec_constant_decoration_cb(struct vtn_builder *b, UNUSED struct vtn_value *val,
     if (dec->decoration != SpvDecorationSpecId)
        return;
  
@@ -66,7 +66,7 @@ index 5cb7691506..7620fef9f5 100644
  }
  
  static void
-@@ -1976,6 +1973,12 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
+@@ -1980,6 +1977,12 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
                      const uint32_t *w, unsigned count)
  {
     struct vtn_value *val = vtn_push_value(b, w[2], vtn_value_type_constant);
@@ -79,7 +79,7 @@ index 5cb7691506..7620fef9f5 100644
     val->constant = rzalloc(b, nir_constant);
     switch (opcode) {
     case SpvOpConstantTrue:
-@@ -1993,7 +1996,7 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
+@@ -1997,7 +2000,7 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
  
        if (opcode == SpvOpSpecConstantTrue ||
            opcode == SpvOpSpecConstantFalse)
@@ -88,7 +88,7 @@ index 5cb7691506..7620fef9f5 100644
  
        val->constant->values[0].b = u32val.u32 != 0;
        break;
-@@ -2024,11 +2027,10 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
+@@ -2028,11 +2031,10 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
  
        if (opcode == SpvOpSpecConstant)
           vtn_foreach_decoration(b, val, spec_constant_decoration_cb,
@@ -101,7 +101,7 @@ index 5cb7691506..7620fef9f5 100644
     case SpvOpConstantComposite: {
        unsigned elem_count = count - 3;
        vtn_fail_if(elem_count != val->type->length,
-@@ -2076,218 +2078,6 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
+@@ -2080,218 +2082,6 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
        break;
     }
  
@@ -320,7 +320,7 @@ index 5cb7691506..7620fef9f5 100644
     case SpvOpConstantNull:
        val->constant = vtn_null_constant(b, val->type);
        val->is_null_constant = true;
-@@ -6370,6 +6160,96 @@ vtn_handle_body_instruction(struct vtn_builder *b, SpvOp opcode,
+@@ -6393,6 +6183,106 @@ vtn_handle_body_instruction(struct vtn_builder *b, SpvOp opcode,
     return true;
  }
  
@@ -388,9 +388,19 @@ index 5cb7691506..7620fef9f5 100644
 +      }
 +   } break;
 +
-+   case SpvOpSpecConstantComposite:
-+      abort(); // Unimplemented
++   case SpvOpSpecConstantComposite: {
++      unsigned elem_count = count - 3;
++      vtn_fail_if(elem_count != val->type->length,
++                  "%s has %u constituents, expected %u",
++                  spirv_op_to_string(opcode), elem_count, val->type->length);
++
++      vtn_assert(b->values[w[2]].value_type == vtn_value_type_ssa);
++      if (!b->values[w[2]].ssa) {
++         b->values[w[2]].value_type = vtn_value_type_invalid; /* Pretend not yet set */
++         vtn_handle_composite(b, SpvOpCompositeConstruct, w, count);
++      }
 +      break;
++   }
 +
 +   case SpvOpSpecConstantOp: {
 +      vtn_assert(val->value_type == vtn_value_type_ssa);
@@ -417,7 +427,7 @@ index 5cb7691506..7620fef9f5 100644
  static bool
  is_glslang(const struct vtn_builder *b)
  {
-@@ -6609,6 +6489,8 @@ spirv_to_nir(const uint32_t *words, size_t word_count,
+@@ -6632,6 +6522,8 @@ spirv_to_nir(const uint32_t *words, size_t word_count,
     /* Skip the SPIR-V header, handled at vtn_create_builder */
     words+= 5;
  
@@ -426,7 +436,7 @@ index 5cb7691506..7620fef9f5 100644
     /* Handle all the preamble instructions */
     words = vtn_foreach_instruction(b, words, word_end,
                                     vtn_handle_preamble_instruction);
-@@ -6690,7 +6572,7 @@ spirv_to_nir(const uint32_t *words, size_t word_count,
+@@ -6713,7 +6605,7 @@ spirv_to_nir(const uint32_t *words, size_t word_count,
           if ((options->create_library || func->referenced) && !func->emitted) {
              b->const_table = _mesa_pointer_hash_table_create(b);
  
@@ -436,7 +446,7 @@ index 5cb7691506..7620fef9f5 100644
           }
        }
 diff --git a/godot-mesa/src/compiler/spirv/vtn_cfg.c b/godot-mesa/src/compiler/spirv/vtn_cfg.c
-index b02c11b8d7..7d0c647f79 100644
+index b02c11b..7d0c647 100644
 --- a/godot-mesa/src/compiler/spirv/vtn_cfg.c
 +++ b/godot-mesa/src/compiler/spirv/vtn_cfg.c
 @@ -1425,6 +1425,8 @@ vtn_emit_cf_func_unstructured(struct vtn_builder *b, struct vtn_function *func,
@@ -459,7 +469,7 @@ index b02c11b8d7..7d0c647f79 100644
        impl->structured = false;
        vtn_emit_cf_func_unstructured(b, func, instruction_handler);
 diff --git a/godot-mesa/src/compiler/spirv/vtn_private.h b/godot-mesa/src/compiler/spirv/vtn_private.h
-index bd65a60d9b..389f477681 100644
+index b1ec64d..1bdb3c8 100644
 --- a/godot-mesa/src/compiler/spirv/vtn_private.h
 +++ b/godot-mesa/src/compiler/spirv/vtn_private.h
 @@ -307,6 +307,8 @@ typedef bool (*vtn_instruction_handler)(struct vtn_builder *, SpvOp,
@@ -491,7 +501,7 @@ index bd65a60d9b..389f477681 100644
  
  #define VTN_DEC_DECORATION -1
 diff --git a/godot-mesa/src/compiler/spirv/vtn_variables.c b/godot-mesa/src/compiler/spirv/vtn_variables.c
-index 8db61c8e61..8545903165 100644
+index 8db61c8..8545903 100644
 --- a/godot-mesa/src/compiler/spirv/vtn_variables.c
 +++ b/godot-mesa/src/compiler/spirv/vtn_variables.c
 @@ -26,6 +26,8 @@
@@ -526,7 +536,7 @@ index 8db61c8e61..8545903165 100644
        vtn_var->input_attachment_index = dec->operands[0];
        vtn_var->access |= ACCESS_NON_WRITEABLE;
 diff --git a/godot-mesa/src/microsoft/compiler/dxil_container.c b/godot-mesa/src/microsoft/compiler/dxil_container.c
-index 209973459d..487cda7a40 100644
+index 2099734..487cda7 100644
 --- a/godot-mesa/src/microsoft/compiler/dxil_container.c
 +++ b/godot-mesa/src/microsoft/compiler/dxil_container.c
 @@ -338,7 +338,8 @@ dxil_container_add_state_validation(struct dxil_container *c,
@@ -582,7 +592,7 @@ index 209973459d..487cda7a40 100644
  
     return true;
 diff --git a/godot-mesa/src/microsoft/compiler/dxil_container.h b/godot-mesa/src/microsoft/compiler/dxil_container.h
-index b3279ee108..08ab970cb8 100644
+index b3279ee..08ab970 100644
 --- a/godot-mesa/src/microsoft/compiler/dxil_container.h
 +++ b/godot-mesa/src/microsoft/compiler/dxil_container.h
 @@ -123,10 +123,11 @@ dxil_container_add_state_validation(struct dxil_container *c,
@@ -600,7 +610,7 @@ index b3279ee108..08ab970cb8 100644
  #ifdef __cplusplus
  }
 diff --git a/godot-mesa/src/microsoft/compiler/dxil_module.c b/godot-mesa/src/microsoft/compiler/dxil_module.c
-index 773e5640a6..57b6a62ffd 100644
+index 6b7f455..af322a7 100644
 --- a/godot-mesa/src/microsoft/compiler/dxil_module.c
 +++ b/godot-mesa/src/microsoft/compiler/dxil_module.c
 @@ -32,6 +32,8 @@
@@ -626,7 +636,7 @@ index 773e5640a6..57b6a62ffd 100644
        case TYPE_INTEGER:
           if (!emit_int_value(m, c->int_value))
 diff --git a/godot-mesa/src/microsoft/compiler/dxil_module.h b/godot-mesa/src/microsoft/compiler/dxil_module.h
-index ca170c5d2f..7fab628a22 100644
+index ca170c5..7fab628 100644
 --- a/godot-mesa/src/microsoft/compiler/dxil_module.h
 +++ b/godot-mesa/src/microsoft/compiler/dxil_module.h
 @@ -29,6 +29,8 @@
@@ -648,7 +658,7 @@ index ca170c5d2f..7fab628a22 100644
  
  struct dxil_instr;
 diff --git a/godot-mesa/src/microsoft/compiler/dxil_validator.cpp b/godot-mesa/src/microsoft/compiler/dxil_validator.cpp
-index 4b68957a7d..a926ec991b 100644
+index 4b68957..ece1e46 100644
 --- a/godot-mesa/src/microsoft/compiler/dxil_validator.cpp
 +++ b/godot-mesa/src/microsoft/compiler/dxil_validator.cpp
 @@ -25,6 +25,7 @@ struct dxil_validator {
@@ -701,7 +711,7 @@ index 4b68957a7d..a926ec991b 100644
  
  static IDxcValidator *
 diff --git a/godot-mesa/src/microsoft/compiler/nir_to_dxil.c b/godot-mesa/src/microsoft/compiler/nir_to_dxil.c
-index 245c5140f9..d6c9d06c30 100644
+index c4de9dd..3c0223f 100644
 --- a/godot-mesa/src/microsoft/compiler/nir_to_dxil.c
 +++ b/godot-mesa/src/microsoft/compiler/nir_to_dxil.c
 @@ -43,6 +43,8 @@
@@ -722,7 +732,7 @@ index 245c5140f9..d6c9d06c30 100644
  }
  
  static const struct dxil_value *
-@@ -5079,6 +5083,12 @@ emit_intrinsic(struct ntd_context *ctx, nir_intrinsic_instr *intr)
+@@ -5091,6 +5095,12 @@ emit_intrinsic(struct ntd_context *ctx, nir_intrinsic_instr *intr)
     case nir_intrinsic_exclusive_scan:
        return emit_reduce(ctx, intr);
  
@@ -735,7 +745,7 @@ index 245c5140f9..d6c9d06c30 100644
     case nir_intrinsic_load_num_workgroups:
     case nir_intrinsic_load_workgroup_size:
     default:
-@@ -6644,6 +6653,7 @@ nir_to_dxil(struct nir_shader *s, const struct nir_to_dxil_options *opts,
+@@ -6656,6 +6666,7 @@ nir_to_dxil(struct nir_shader *s, const struct nir_to_dxil_options *opts,
        MIN2(opts->shader_model_max & 0xffff, validator_version & 0xffff);
     ctx->mod.major_validator = validator_version >> 16;
     ctx->mod.minor_validator = validator_version & 0xffff;
@@ -743,7 +753,7 @@ index 245c5140f9..d6c9d06c30 100644
  
     if (s->info.stage <= MESA_SHADER_FRAGMENT) {
        uint64_t in_mask =
-@@ -6762,19 +6772,23 @@ nir_to_dxil(struct nir_shader *s, const struct nir_to_dxil_options *opts,
+@@ -6774,19 +6785,23 @@ nir_to_dxil(struct nir_shader *s, const struct nir_to_dxil_options *opts,
        goto out;
     }
  
@@ -770,7 +780,7 @@ index 245c5140f9..d6c9d06c30 100644
        static int shader_id = 0;
        char buffer[64];
 diff --git a/godot-mesa/src/microsoft/compiler/nir_to_dxil.h b/godot-mesa/src/microsoft/compiler/nir_to_dxil.h
-index bdfbe23953..b95ca1d79f 100644
+index bdfbe23..b95ca1d 100644
 --- a/godot-mesa/src/microsoft/compiler/nir_to_dxil.h
 +++ b/godot-mesa/src/microsoft/compiler/nir_to_dxil.h
 @@ -29,6 +29,8 @@
@@ -791,7 +801,7 @@ index bdfbe23953..b95ca1d79f 100644
  
  typedef void (*dxil_msg_callback)(void *priv, const char *msg);
 diff --git a/godot-mesa/src/microsoft/spirv_to_dxil/spirv_to_dxil.c b/godot-mesa/src/microsoft/spirv_to_dxil/spirv_to_dxil.c
-index 76cf6b007e..819339adf5 100644
+index 76cf6b0..819339a 100644
 --- a/godot-mesa/src/microsoft/spirv_to_dxil/spirv_to_dxil.c
 +++ b/godot-mesa/src/microsoft/spirv_to_dxil/spirv_to_dxil.c
 @@ -32,6 +32,8 @@
@@ -820,7 +830,7 @@ index 76cf6b007e..819339adf5 100644
  
     const struct spirv_to_nir_options *spirv_opts = dxil_spirv_nir_get_spirv_options();
 diff --git a/godot-mesa/src/microsoft/spirv_to_dxil/spirv_to_dxil.h b/godot-mesa/src/microsoft/spirv_to_dxil/spirv_to_dxil.h
-index 40adf761ef..30efbd16dd 100644
+index 40adf76..30efbd1 100644
 --- a/godot-mesa/src/microsoft/spirv_to_dxil/spirv_to_dxil.h
 +++ b/godot-mesa/src/microsoft/spirv_to_dxil/spirv_to_dxil.h
 @@ -30,6 +30,8 @@
