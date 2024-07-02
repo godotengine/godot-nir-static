@@ -119,6 +119,7 @@ opts.Add("cxxflags", "Custom flags for the C++ compiler")
 opts.Add("cflags", "Custom flags for the C compiler")
 opts.Add("linkflags", "Custom flags for the linker")
 opts.Add("extra_suffix", "Custom extra suffix added to the base filename of all generated binary files.", "")
+opts.Add(BoolVariable("use_asan", "Use address sanitizer (ASAN) in MSVC", False))
 
 # Targets flags tool (optimizations, debug symbols)
 target_tool = Tool("targets", toolpath=["godot-tools"])
@@ -190,6 +191,12 @@ if env["platform"] == "macos":
         env.Append(LINKFLAGS=["-mmacosx-version-min=10.13"])
 elif env["platform"] == "windows":
     env.AppendUnique(CPPDEFINES=["WINVER=0x0603", "_WIN32_WINNT=0x0603"])
+
+# Sanitizers.
+if env.get("use_asan", False) and env.get("is_msvc", False):
+    env["extra_suffix"] += ".san"
+    env.Append(LINKFLAGS=["/INFERASANLIBS"])
+    env.Append(CCFLAGS=["/fsanitize=address"])
 
 
 scons_cache_path = os.environ.get("SCONS_CACHE")
