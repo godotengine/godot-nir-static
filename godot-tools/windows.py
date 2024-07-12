@@ -33,10 +33,15 @@ def generate(env):
         elif env["arch"] == "x86_32":
             env["TARGET_ARCH"] = "x86"
 
+        env["MSVC_SETUP_RUN"] = False  # Need to set this to re-run the tool
+        env["MSVS_VERSION"] = None
+        env["MSVC_VERSION"] = None
+
         env["is_msvc"] = True
 
         # MSVC, linker, and archiver.
         msvc.generate(env)
+        env.Tool("msvc")
         env.Tool("mslib")
         env.Tool("mslink")
 
@@ -93,7 +98,7 @@ def generate(env):
         else:
             env["CXX"] = prefix + "-w64-mingw32-g++"
             env["CC"] = prefix + "-w64-mingw32-gcc"
-            env["AR"] = prefix + "-w64-mingw32-ar"
+            env["AR"] = prefix + "-w64-mingw32-gcc-ar"
             env["RANLIB"] = prefix + "-w64-mingw32-ranlib"
             env["LINK"] = prefix + "-w64-mingw32-g++"
 

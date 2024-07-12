@@ -1,0 +1,178 @@
+name: Godot Mesa/NIR static libs
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    strategy:
+      matrix:
+        include:
+        # MinGW/LLVM libs using UCRT
+        - name: 🏁 Windows - MinGW/LLVM (UCRT) x86_64
+          platform: windows
+          os: windows-2019
+          artifact-name: godot-nir-static-x86_64-llvm-release
+          artifact-path: bin/libNIR.windows.x86_64.a
+          flags: use_mingw=yes arch=x86_64 use_llvm=yes mingw_prefix=$HOME/llvm-mingw
+          llvm: yes
+
+        - name: 🏁 Windows - MinGW/LLVM (UCRT) x86_32
+          platform: windows
+          os: windows-2019
+          artifact-name: godot-nir-static-x86_32-llvm-release
+          artifact-path: bin/libNIR.windows.x86_32.a
+          flags: use_mingw=yes arch=x86_32 use_llvm=yes mingw_prefix=$HOME/llvm-mingw
+          llvm: yes
+
+        - name: 🏁 Windows - MinGW/LLVM (UCRT) arm64
+          platform: windows
+          os: windows-2019
+          artifact-name: godot-nir-static-arm64-llvm-release
+          artifact-path: bin/libNIR.windows.arm64.a
+          flags: use_mingw=yes arch=arm64 use_llvm=yes mingw_prefix=$HOME/llvm-mingw
+          llvm: yes
+
+        # MSVC libs
+        - name: 🏁 Windows - MSVC x86_64
+          platform: windows
+          os: windows-2019
+          artifact-name: godot-nir-static-x86_64-msvc-release
+          artifact-path: bin/libNIR.windows.x86_64.lib
+          flags: use_mingw=no arch=x86_64
+
+        - name: 🏁 Windows - MSVC x86_32
+          platform: windows
+          os: windows-2019
+          artifact-name: godot-nir-static-x86_32-msvc-release
+          artifact-path: bin/libNIR.windows.x86_32.lib
+          flags: use_mingw=no arch=x86_32
+
+        - name: 🏁 Windows - MSVC arm64
+          platform: windows
+          os: windows-2019
+          artifact-name: godot-nir-static-arm64-msvc-release
+          artifact-path: bin/libNIR.windows.arm64.lib
+          flags: use_mingw=no arch=arm64
+
+        - name: 🏁 Windows - MSVC arm32
+          platform: windows
+          os: windows-2019
+          artifact-name: godot-nir-static-arm32-msvc-release
+          artifact-path: bin/libNIR.windows.arm32.lib
+          flags: use_mingw=no arch=arm32
+
+        # MinGW/GCC libs using MSVCRT
+        - name: 🏁 Windows - MinGW/GCC (MSVCRT) x86_64
+          platform: windows
+          os: windows-2019
+          artifact-name: godot-nir-static-x86_64-gcc-release
+          artifact-path: bin/libNIR.windows.x86_64.a
+          flags: use_mingw=yes arch=x86_64
+          mingw: yes
+          msys: mingw64
+          msysenv: x86_64
+
+        - name: 🏁 Windows - MinGW/GCC (MSVCRT) x86_32
+          platform: windows
+          os: windows-2019
+          artifact-name: godot-nir-static-x86_32-gcc-release
+          artifact-path: bin/libNIR.windows.x86_32.a
+          flags: use_mingw=yes arch=x86_32
+          mingw: yes
+          msys: mingw32
+          msysenv: i686
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: 'true'
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install SCons (Native env)
+        if: ${{ matrix.mingw != 'yes' }}
+        run: |
+          python -m pip install scons==4.0.0
+
+      - name: Install mako
+        run: |
+          python -m pip install mako
+
+      - name: Setup MinGW/LLVM
+        if: ${{ matrix.platform == 'windows' && matrix.llvm == 'yes' }}
+        run: |
+          curl -L -O https://github.com/mstorsjo/llvm-mingw/releases/download/20240619/llvm-mingw-20240619-ucrt-x86_64.zip
+          unzip -q llvm-mingw-*.zip
+          rm llvm-mingw-*.zip
+          mv llvm-mingw-* "$HOME/llvm-mingw"
+          echo "$HOME/llvm-mingw/bin" >> $GITHUB_PATH
+
+      - name: Setup MinGW/MSYS2
+        if: ${{ matrix.mingw == 'yes' }}
+        uses: msys2/setup-msys2@v2
+        with:
+          update: true
+          msystem: ${{matrix.msys}}
+          install: mingw-w64-${{matrix.msysenv}}-gcc mingw-w64-${{matrix.msysenv}}-scons
+
+      - name: Prepare Mesa source
+        shell: bash
+        run: |
+          ./update_mesa.sh
+
+      - name: Build Mesa (Native env)
+        if: ${{ matrix.mingw != 'yes' }}
+        run: |
+          scons platform=${{ matrix.platform }} ${{ matrix.flags }} optimize=speed
+
+      - name: Build Mesa (MSYS2 env)
+        if: ${{ matrix.mingw == 'yes' }}
+        shell: msys2 {0}
+        run: |
+          scons platform=${{ matrix.platform }} ${{ matrix.flags }} optimize=speed
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact-name }}
+          path: |
+            ${{ matrix.artifact-path }}
+            godot-mesa/VERSION.info
+            godot-mesa/**/*.h
+            godot-mesa/**/*.hpp
+          if-no-files-found: error
+
+  release:
+    name: 'Release'
+
+    needs: [build]
+
+    runs-on: ubuntu-latest
+
+    if: ${{ startsWith(github.ref, 'refs/tags/') }}
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Create Release
+        uses: ncipollo/release-action@v1
+        with:
+          allowUpdates: true
+          removeArtifacts: true
+          omitNameDuringUpdate: true
+          omitBodyDuringUpdate: true
+          artifacts: "godot-nir-static*"
+          artifactErrorsFailBuild: true
