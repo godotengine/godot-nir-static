@@ -3,9 +3,7 @@
 import os
 import platform
 import sys
-import subprocess
 from pathlib import Path
-from SCons.Errors import UserError
 
 EnsureSConsVersion(4, 0)
 

@@ -1,7 +1,5 @@
-import os
-import sys
 from SCons.Script import ARGUMENTS
-from SCons.Variables import *
+from SCons.Variables import BoolVariable, EnumVariable
 from SCons.Variables.BoolVariable import _text2bool
 
 
