@@ -167,6 +167,10 @@ jobs:
       - name: Download Artifacts
         uses: actions/download-artifact@v4
 
+      - name: ZIP Artifacts
+        run: |
+          for i in */; do (cd "${i%/}"; zip -r "../${i%/}.zip" .; cd ..); done
+
       - name: Create Release
         uses: ncipollo/release-action@v1
         with:
@@ -174,5 +178,5 @@ jobs:
           removeArtifacts: true
           omitNameDuringUpdate: true
           omitBodyDuringUpdate: true
-          artifacts: "godot-nir-static*"
+          artifacts: "*.zip"
           artifactErrorsFailBuild: true
