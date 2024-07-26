@@ -58,13 +58,6 @@ jobs:
           artifact-path: bin/libNIR.windows.arm64.lib
           flags: use_mingw=no arch=arm64
 
-        - name: 🏁 Windows - MSVC arm32
-          platform: windows
-          os: windows-2019
-          artifact-name: godot-nir-static-arm32-msvc-release
-          artifact-path: bin/libNIR.windows.arm32.lib
-          flags: use_mingw=no arch=arm32
-
         # MinGW/GCC libs using MSVCRT
         - name: 🏁 Windows - MinGW/GCC (MSVCRT) x86_64
           platform: windows
