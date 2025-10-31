@@ -322,7 +322,6 @@ if env.get("is_msvc", False):
 else:
     env.Append(
         CPPDEFINES=[
-            ("__MSVCRT_VERSION__", 0x0700),
             "HAVE_STRUCT_TIMESPEC",
         ]
     )
@@ -331,6 +330,7 @@ else:
 
 if env.get("use_llvm", False):
     extra_defines += [
+        ("__MSVCRT_VERSION__", 0x0700),
         "HAVE_TIMESPEC_GET",
         "_UCRT",
     ]
