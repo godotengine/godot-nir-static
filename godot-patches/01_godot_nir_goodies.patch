@@ -747,6 +747,40 @@ index bdfbe23..b95ca1d 100644
  };
  
  typedef void (*dxil_msg_callback)(void *priv, const char *msg);
+diff --git a/godot-mesa/src/microsoft/spirv_to_dxil/dxil_spirv_nir.c b/godot-mesa/src/microsoft/spirv_to_dxil/dxil_spirv_nir.c
+index 43de965..8965ecc 100644
+--- a/godot-mesa/src/microsoft/spirv_to_dxil/dxil_spirv_nir.c
++++ b/godot-mesa/src/microsoft/spirv_to_dxil/dxil_spirv_nir.c
+@@ -1068,28 +1068,7 @@ dxil_spirv_nir_passes(nir_shader *nir,
+    NIR_PASS_V(nir, nir_lower_alu_to_scalar, NULL, NULL);
+    NIR_PASS_V(nir, nir_opt_dce);
+    NIR_PASS_V(nir, dxil_nir_lower_double_math);
+-
+-   {
+-      bool progress;
+-      do
+-      {
+-         progress = false;
+-         NIR_PASS(progress, nir, nir_copy_prop);
+-         NIR_PASS(progress, nir, nir_opt_copy_prop_vars);
+-         NIR_PASS(progress, nir, nir_opt_deref);
+-         NIR_PASS(progress, nir, nir_opt_dce);
+-         NIR_PASS(progress, nir, nir_opt_undef);
+-         NIR_PASS(progress, nir, nir_opt_constant_folding);
+-         NIR_PASS(progress, nir, nir_opt_cse);
+-         if (nir_opt_trivial_continues(nir)) {
+-            progress = true;
+-            NIR_PASS(progress, nir, nir_copy_prop);
+-            NIR_PASS(progress, nir, nir_opt_dce);
+-         }
+-         NIR_PASS(progress, nir, nir_lower_vars_to_ssa);
+-         NIR_PASS(progress, nir, nir_opt_algebraic);
+-      } while (progress);
+-   }
++   NIR_PASS_V(nir, nir_lower_vars_to_ssa);
+ 
+    if (conf->declared_read_only_images_as_srvs)
+       NIR_PASS_V(nir, nir_lower_readonly_images_to_tex, true);
 diff --git a/godot-mesa/src/microsoft/spirv_to_dxil/spirv_to_dxil.c b/godot-mesa/src/microsoft/spirv_to_dxil/spirv_to_dxil.c
 index 76cf6b0..819339a 100644
 --- a/godot-mesa/src/microsoft/spirv_to_dxil/spirv_to_dxil.c
