@@ -94,7 +94,7 @@ jobs:
       - name: Install SCons (Native env)
         if: ${{ matrix.mingw != 'yes' }}
         run: |
-          python -m pip install scons==4.0.0
+          python -m pip install scons==4.9.0
 
       - name: Install mako
         run: |
