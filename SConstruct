@@ -292,6 +292,9 @@ extra_defines = [
     "WINDOWS_NO_FUTEX",
 ]
 
+if env["optimize"] != "debug":
+    extra_defines += ["NDEBUG"]
+
 # These defines are inspired by the Meson build scripts in the original repo.
 extra_defines += [
     "__STDC_CONSTANT_MACROS",
