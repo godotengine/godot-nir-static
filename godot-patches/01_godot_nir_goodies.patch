@@ -13,7 +13,7 @@ index 7474afb..119b832 100644
  load("global", [1], [ACCESS, ALIGN_MUL, ALIGN_OFFSET], [CAN_ELIMINATE])
  # src[] = { address }.
 diff --git a/godot-mesa/src/compiler/spirv/spirv_to_nir.c b/godot-mesa/src/compiler/spirv/spirv_to_nir.c
-index 6f87ff9..da61ec5 100644
+index 6f87ff9..3684b32 100644
 --- a/godot-mesa/src/compiler/spirv/spirv_to_nir.c
 +++ b/godot-mesa/src/compiler/spirv/spirv_to_nir.c
 @@ -39,6 +39,8 @@
@@ -320,7 +320,7 @@ index 6f87ff9..da61ec5 100644
     case SpvOpConstantNull:
        val->constant = vtn_null_constant(b, val->type);
        val->is_null_constant = true;
-@@ -6393,6 +6183,106 @@ vtn_handle_body_instruction(struct vtn_builder *b, SpvOp opcode,
+@@ -6393,6 +6183,93 @@ vtn_handle_body_instruction(struct vtn_builder *b, SpvOp opcode,
     return true;
  }
  
@@ -357,32 +357,19 @@ index 6f87ff9..da61ec5 100644
 +      vtn_assert(b->nb.cursor.option == nir_cursor_after_instr);
 +      vtn_assert(b->nb.cursor.instr->type == nir_instr_type_intrinsic);
 +
-+      nir_ssa_def *temp = nir_build_alu(
-+         &b->nb,
-+         nir_op_iand,
-+         non_opt_const,
-+         nir_imm_int(&b->nb, 0xbfffffff),
-+         NULL,
-+         NULL);
 +      val->ssa = vtn_create_ssa_value(b, val->type->type);
 +      if (val->type->type == glsl_uint_type()) {
-+         val->ssa->def = temp;
++         val->ssa->def = non_opt_const;
 +      } else if (val->type->type == glsl_bool_type()) {
 +         val->ssa->def = nir_build_alu(
 +            &b->nb,
 +            nir_op_ine,
-+            temp,
++            non_opt_const,
 +            nir_imm_int(&b->nb, 0),
 +            NULL,
 +            NULL);
 +      } else if (val->type->type == glsl_float_type()) {
-+         val->ssa->def = nir_build_alu(
-+            &b->nb,
-+            nir_op_ishl,
-+            temp,
-+            nir_imm_int(&b->nb, 1),
-+            NULL,
-+            NULL);
++         val->ssa->def = non_opt_const;
 +      } else {
 +         vtn_assert(false);
 +      }
@@ -427,7 +414,7 @@ index 6f87ff9..da61ec5 100644
  static bool
  is_glslang(const struct vtn_builder *b)
  {
-@@ -6632,6 +6522,8 @@ spirv_to_nir(const uint32_t *words, size_t word_count,
+@@ -6632,6 +6509,8 @@ spirv_to_nir(const uint32_t *words, size_t word_count,
     /* Skip the SPIR-V header, handled at vtn_create_builder */
     words+= 5;
  
@@ -436,7 +423,7 @@ index 6f87ff9..da61ec5 100644
     /* Handle all the preamble instructions */
     words = vtn_foreach_instruction(b, words, word_end,
                                     vtn_handle_preamble_instruction);
-@@ -6713,7 +6605,7 @@ spirv_to_nir(const uint32_t *words, size_t word_count,
+@@ -6713,7 +6592,7 @@ spirv_to_nir(const uint32_t *words, size_t word_count,
           if ((options->create_library || func->referenced) && !func->emitted) {
              b->const_table = _mesa_pointer_hash_table_create(b);
  
@@ -610,7 +597,7 @@ index b3279ee..08ab970 100644
  #ifdef __cplusplus
  }
 diff --git a/godot-mesa/src/microsoft/compiler/dxil_module.c b/godot-mesa/src/microsoft/compiler/dxil_module.c
-index 6b7f455..af322a7 100644
+index 773e564..57b6a62 100644
 --- a/godot-mesa/src/microsoft/compiler/dxil_module.c
 +++ b/godot-mesa/src/microsoft/compiler/dxil_module.c
 @@ -32,6 +32,8 @@
