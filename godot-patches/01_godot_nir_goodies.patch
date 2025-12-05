@@ -989,6 +989,50 @@ index 0070067..72410ef 100644
     do {                                                                        \
        /* NOLINTBEGIN(bugprone-sizeof-expression) */                            \
        char __tmp[sizeof(a) == sizeof(b) ? (ptrdiff_t)sizeof(a) : -1];          \
+diff --git a/godot-mesa/src/util/ralloc.c b/godot-mesa/src/util/ralloc.c
+index ba560c8..07379ae 100644
+--- a/godot-mesa/src/util/ralloc.c
++++ b/godot-mesa/src/util/ralloc.c
+@@ -35,6 +35,8 @@
+ 
+ #include "ralloc.h"
+ 
++#include "drivers/d3d12/d3d12_godot_nir_bridge.h"
++
+ #define CANARY 0x5A1106
+ 
+ #if defined(__LP64__) || defined(_WIN64)
+@@ -115,8 +117,8 @@ ralloc_size(const void *ctx, size_t size)
+     *  - Allocations of a size that rounds up to a multiple of 8 bytes and
+     *    not 16 bytes, are only required to have at least 8 byte alignment.
+     */
+-   void *block = malloc(align64(size + sizeof(ralloc_header),
+-                                alignof(ralloc_header)));
++   void *block = godot_nir_malloc(align64(size + sizeof(ralloc_header),
++                                          alignof(ralloc_header)));
+    ralloc_header *info;
+    ralloc_header *parent;
+ 
+@@ -164,8 +166,8 @@ resize(void *ptr, size_t size)
+    ralloc_header *child, *old, *info;
+ 
+    old = get_header(ptr);
+-   info = realloc(old, align64(size + sizeof(ralloc_header),
+-                               alignof(ralloc_header)));
++   info = godot_nir_realloc(old, align64(size + sizeof(ralloc_header),
++                                         alignof(ralloc_header)));
+ 
+    if (info == NULL)
+       return NULL;
+@@ -323,7 +325,7 @@ unsafe_free(ralloc_header *info)
+    if (info->destructor != NULL)
+       info->destructor(PTR_FROM_HEADER(info));
+ 
+-   free(info);
++   godot_nir_free(info);
+ }
+ 
+ void
 diff --git a/godot-mesa/src/util/set.c b/godot-mesa/src/util/set.c
 index d6c0623..1eac1e8 100644
 --- a/godot-mesa/src/util/set.c
