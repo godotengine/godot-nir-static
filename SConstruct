@@ -215,12 +215,12 @@ custom_build_steps = [
     ],
     ["src/compiler/nir", "nir_builder_opcodes_h.py > %s/nir_builder_opcodes.h", "nir_builder_opcodes.h"],
     ["src/compiler/nir", "nir_constant_expressions.py > %s/nir_constant_expressions.c", "nir_constant_expressions.c"],
-    ["src/compiler/nir", "nir_intrinsics_h.py --outdir %s", "nir_intrinsics.h"],
-    ["src/compiler/nir", "nir_intrinsics_c.py --outdir %s", "nir_intrinsics.c"],
-    ["src/compiler/nir", "nir_intrinsics_indices_h.py --outdir %s", "nir_intrinsics_indices.h"],
+    ["src/compiler/nir", "nir_intrinsics_h.py --out %s/nir_intrinsics.h", "nir_intrinsics.h"],
+    ["src/compiler/nir", "nir_intrinsics_c.py --out %s/nir_intrinsics.c", "nir_intrinsics.c"],
+    ["src/compiler/nir", "nir_intrinsics_indices_h.py --out %s/nir_intrinsics_indices.h", "nir_intrinsics_indices.h"],
     ["src/compiler/nir", "nir_opcodes_h.py > %s/nir_opcodes.h", "nir_opcodes.h"],
     ["src/compiler/nir", "nir_opcodes_c.py > %s/nir_opcodes.c", "nir_opcodes.c"],
-    ["src/compiler/nir", "nir_opt_algebraic.py > %s/nir_opt_algebraic.c", "nir_opt_algebraic.c"],
+    ["src/compiler/nir", "nir_opt_algebraic.py --out %s/nir_opt_algebraic.c", "nir_opt_algebraic.c"],
     ["src/compiler/spirv", "vtn_generator_ids_h.py spir-v.xml %s/vtn_generator_ids.h", "vtn_generator_ids.h"],
     [
         "src/microsoft/compiler",
@@ -228,8 +228,11 @@ custom_build_steps = [
         "dxil_nir_algebraic.c",
     ],
     ["src/util", "format_srgb.py > %s/format_srgb.c", "format_srgb.c"],
-    ["src/util/format", "u_format_table.py u_format.csv --header > %s/u_format_pack.h", "u_format_pack.h"],
-    ["src/util/format", "u_format_table.py u_format.csv > %s/u_format_table.c", "u_format_table.c"],
+    ["src/util/format", "u_format_table.py u_format.yaml --enums > %s/u_format_gen.h", "u_format_gen.h"],
+    ["src/util/format", "u_format_table.py u_format.yaml --header > %s/u_format_pack.h", "u_format_pack.h"],
+    ["src/util/format", "u_format_table.py u_format.yaml > %s/u_format_table.c", "u_format_table.c"],
+    ["src/compiler", "builtin_types_h.py %s/builtin_types.h", "builtin_types.h"],
+    ["src/compiler", "builtin_types_c.py %s/builtin_types.c", "builtin_types.c"],
 ]
 
 mesa_sources = []
@@ -304,6 +307,10 @@ extra_defines += [
     ("PACKAGE_BUGREPORT", '\\"https://gitlab.freedesktop.org/mesa/mesa/-/issues\\"'),
     "PIPE_SUBSYSTEM_WINDOWS_USER",
     "_USE_MATH_DEFINES",
+    "BLAKE3_NO_SSE2",
+    "BLAKE3_NO_SSE41",
+    "BLAKE3_NO_AVX2",
+    "BLAKE3_NO_AVX512",
 ]
 
 if env.get("is_msvc", False):

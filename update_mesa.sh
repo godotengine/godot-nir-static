@@ -36,7 +36,7 @@ run_custom_steps_at_source() {
     }
 
     run_step bin 'git_sha1_gen.py --output $OUTDIR/git_sha1.h'
-    run_step src/compiler/spirv 'spirv_info_c.py spirv.core.grammar.json $OUTDIR/spirv_info.c'
+    run_step src/compiler/spirv 'spirv_info_gen.py --json spirv.core.grammar.json --out-h $OUTDIR/spirv_info.h --out-c $OUTDIR/spirv_info.c'
     run_step src/compiler/spirv 'vtn_gather_types_c.py spirv.core.grammar.json $OUTDIR/vtn_gather_types.c'
 }
 
@@ -49,6 +49,9 @@ copy_file() {
 }
 
 copy_custom_steps_sources() {
+    copy_file src/compiler builtin_types.py
+    copy_file src/compiler builtin_types_h.py
+    copy_file src/compiler builtin_types_c.py
     copy_file src/compiler/glsl ir_expression_operation.py
     copy_file src/compiler/nir nir_builder_opcodes_h.py
     copy_file src/compiler/nir nir_constant_expressions.py
@@ -65,7 +68,7 @@ copy_custom_steps_sources() {
     copy_file src/compiler/spirv vtn_generator_ids_h.py
     copy_file src/microsoft/compiler dxil_nir_algebraic.py
     copy_file src/util format_srgb.py
-    copy_file src/util/format u_format.csv
+    copy_file src/util/format u_format.yaml
     copy_file src/util/format u_format_pack.py
     copy_file src/util/format u_format_parse.py
     copy_file src/util/format u_format_table.py
@@ -126,33 +129,51 @@ copy_sources() {
     copy_file src/util blob.c
     copy_file src/util bitscan.c
     copy_file src/util double.c
+    copy_file src/util float8.c
     copy_file src/util half_float.c
     copy_file src/util hash_table.c
     copy_file src/util log.c
+    copy_file src/util mesa-blake3.c
     copy_file src/util mesa-sha1.c
     copy_file src/util memstream.c
     copy_file src/util os_misc.c
     copy_file src/util ralloc.c
+    copy_file src/util range_minimum_query.c
     copy_file src/util rb_tree.c
     copy_file src/util rgtc.c
     copy_file src/util set.c
     copy_file src/util simple_mtx.c
     copy_file src/util softfloat.c
     copy_file src/util string_buffer.c
+    copy_file src/util strndup.c
     copy_file src/util u_call_once.c
+    copy_file src/util u_cpu_detect.c
     copy_file src/util u_debug.c
+    copy_file src/util u_dynarray.c
     copy_file src/util u_printf.c
     copy_file src/util u_qsort.cpp
+    copy_file src/util u_thread.c
     copy_file src/util u_vector.c
     copy_file src/util u_worklist.c
+    copy_subir_headers src/util/blake3
+    copy_file src/util/blake3 blake3.c
+    copy_file src/util/blake3 blake3_dispatch.c
+    copy_file src/util/blake3 blake3_portable.c
+    copy_subir_headers src/util/perf
 
     cp ./mesa/VERSION godot-mesa/VERSION.info
     check_error
 }
 
 blacklist_sources() {
+    rm godot-mesa/src/compiler/nir/nir_stub.c
+    check_error
     # These are programs. Not needed and makes build hungrier for dependencies.
     rm godot-mesa/src/compiler/spirv/spirv2nir.c
+    check_error
+    rm godot-mesa/src/compiler/spirv/vtn_bindgen2.c
+    check_error
+    rm godot-mesa/src/microsoft/compiler/dxil_buffer_test.c
     check_error
     rm godot-mesa/src/microsoft/spirv_to_dxil/spirv2dxil.c
     check_error
@@ -195,17 +216,20 @@ custom_source_gen() {
     run_step 'src/compiler' 'glsl/ir_expression_operation.py enum' 'ir_expression_operation.h'
     run_step 'src/compiler/nir' 'nir_builder_opcodes_h.py' 'nir_builder_opcodes.h'
     run_step 'src/compiler/nir' 'nir_constant_expressions.py' 'nir_constant_expressions.c'
-    run_step 'src/compiler/nir' 'nir_intrinsics_h.py --outdir $GENDIR'
-    run_step 'src/compiler/nir' 'nir_intrinsics_c.py --outdir $GENDIR'
-    run_step 'src/compiler/nir' 'nir_intrinsics_indices_h.py --outdir $GENDIR'
+    run_step 'src/compiler/nir' 'nir_intrinsics_h.py --out $GENDIR/nir_intrinsics.h'
+    run_step 'src/compiler/nir' 'nir_intrinsics_c.py --out $GENDIR/nir_intrinsics.c'
+    run_step 'src/compiler/nir' 'nir_intrinsics_indices_h.py --out $GENDIR/nir_intrinsics_indices.h'
     run_step 'src/compiler/nir' 'nir_opcodes_h.py' 'nir_opcodes.h'
     run_step 'src/compiler/nir' 'nir_opcodes_c.py' 'nir_opcodes.c'
-    run_step 'src/compiler/nir' 'nir_opt_algebraic.py' 'nir_opt_algebraic.c'
+    run_step 'src/compiler/nir' 'nir_opt_algebraic.py --out $GENDIR/nir_opt_algebraic.c'
     run_step 'src/compiler/spirv' 'vtn_generator_ids_h.py spir-v.xml $GENDIR/vtn_generator_ids.h'
     run_step 'src/microsoft/compiler' 'dxil_nir_algebraic.py -p ../../../src/compiler/nir' 'dxil_nir_algebraic.c'
     run_step 'src/util' 'format_srgb.py' 'format_srgb.c'
-    run_step 'src/util/format' 'u_format_table.py u_format.csv --header' 'u_format_pack.h'
-    run_step 'src/util/format' 'u_format_table.py u_format.csv' 'u_format_table.c'
+    run_step 'src/util/format' 'u_format_table.py u_format.yaml --enums' 'u_format_gen.h'
+    run_step 'src/util/format' 'u_format_table.py u_format.yaml --header' 'u_format_pack.h'
+    run_step 'src/util/format' 'u_format_table.py u_format.yaml' 'u_format_table.c'
+    run_step 'src/compiler' 'builtin_types_h.py $GENDIR/builtin_types.h'
+    run_step 'src/compiler' 'builtin_types_c.py $GENDIR/builtin_types.c'
 }
 
 
