@@ -1,47 +1,94 @@
+diff --git a/godot-mesa/src/compiler/nir/nir_dominance_lca.c b/godot-mesa/src/compiler/nir/nir_dominance_lca.c
+index 84a7f1d..40c0811 100644
+--- a/godot-mesa/src/compiler/nir/nir_dominance_lca.c
++++ b/godot-mesa/src/compiler/nir/nir_dominance_lca.c
+@@ -167,7 +167,7 @@ nir_dominance_lca(nir_block *b1, nir_block *b2)
+    uint32_t i1 = dom_lca_representative(b1);
+    uint32_t i2 = dom_lca_representative(b2);
+    if (i1 > i2)
+-      SWAP(i1, i2);
++      MESA_SWAP(i1, i2);
+    uint32_t index = range_minimum_query(&impl->dom_lca_info.table, i1, i2 + 1);
+    nir_block *result = impl->dom_lca_info.block_from_idx[index];
+ 
 diff --git a/godot-mesa/src/compiler/nir/nir_intrinsics.py b/godot-mesa/src/compiler/nir/nir_intrinsics.py
-index 7474afb..119b832 100644
+index 41371db..dd3454f 100644
 --- a/godot-mesa/src/compiler/nir/nir_intrinsics.py
 +++ b/godot-mesa/src/compiler/nir/nir_intrinsics.py
-@@ -1046,6 +1046,9 @@ load("push_constant", [1], [BASE, RANGE, ALIGN_MUL, ALIGN_OFFSET], [CAN_ELIMINAT
+@@ -1262,6 +1262,9 @@ load("push_constant", [1], [BASE, RANGE, ALIGN_MUL, ALIGN_OFFSET], [CAN_ELIMINAT
  # src[] = { offset }.
- load("constant", [1], [BASE, RANGE, ALIGN_MUL, ALIGN_OFFSET],
+ load("constant", [1], [BASE, RANGE, ACCESS, ALIGN_MUL, ALIGN_OFFSET],
       [CAN_ELIMINATE, CAN_REORDER])
 +# src[] = { offset }.
-+load("constant_non_opt", [1], [BASE, RANGE, ALIGN_MUL, ALIGN_OFFSET],
++load("constant_non_opt", [1], [BASE, RANGE, ACCESS, ALIGN_MUL, ALIGN_OFFSET],
 +     [CAN_ELIMINATE, CAN_REORDER])
  # src[] = { address }.
  load("global", [1], [ACCESS, ALIGN_MUL, ALIGN_OFFSET], [CAN_ELIMINATE])
- # src[] = { address }.
+ # src[] = { base_address, offset, bound }.
+diff --git a/godot-mesa/src/compiler/nir/nir_loop_analyze.c b/godot-mesa/src/compiler/nir/nir_loop_analyze.c
+index aa7369c..34b8a99 100644
+--- a/godot-mesa/src/compiler/nir/nir_loop_analyze.c
++++ b/godot-mesa/src/compiler/nir/nir_loop_analyze.c
+@@ -1020,7 +1020,7 @@ try_find_trip_count_vars_in_logical_op(nir_scalar *cond,
+ 
+       if (!nir_scalar_is_alu(logical_op) || !nir_scalar_is_const(zero)) {
+          /* Maybe we had it the wrong way, flip things around */
+-         SWAP(zero, logical_op);
++         MESA_SWAP(zero, logical_op);
+ 
+          /* If we still didn't find what we need then return */
+          if (!nir_scalar_is_const(zero))
+diff --git a/godot-mesa/src/compiler/nir/nir_lower_cooperative_matrix.c b/godot-mesa/src/compiler/nir/nir_lower_cooperative_matrix.c
+index 830746b..74c8df6 100644
+--- a/godot-mesa/src/compiler/nir/nir_lower_cooperative_matrix.c
++++ b/godot-mesa/src/compiler/nir/nir_lower_cooperative_matrix.c
+@@ -530,7 +530,7 @@ split_cmat_load_store(nir_builder *b,
+          col_offset = (i / split->num_col_splits) * desc.rows;
+ 
+          if (layout == GLSL_MATRIX_LAYOUT_ROW_MAJOR)
+-            SWAP(row_offset, col_offset);
++            MESA_SWAP(row_offset, col_offset);
+ 
+          ptr_deref = nir_build_deref_cast(b, &addr_deref->def, addr_deref->modes, scalar_type, elem_size);
+          stride = nir_udiv_imm(b, nir_imul_imm(b, stride, deref_bytes_size), elem_size);
+diff --git a/godot-mesa/src/compiler/nir/nir_opt_reassociate.c b/godot-mesa/src/compiler/nir/nir_opt_reassociate.c
+index 09566a5..15c5ad1 100644
+--- a/godot-mesa/src/compiler/nir/nir_opt_reassociate.c
++++ b/godot-mesa/src/compiler/nir/nir_opt_reassociate.c
+@@ -118,7 +118,7 @@ get_pair_key(nir_op op, nir_scalar a, nir_scalar b)
+    if ((a.def->index > b.def->index) ||
+        ((a.def->index == b.def->index) && (a.comp > b.comp))) {
+ 
+-      SWAP(a, b);
++      MESA_SWAP(a, b);
+    }
+ 
+    return (struct pair_key){
+@@ -460,8 +460,8 @@ reassociate_chain(struct chain *c, void *pair_freq)
+ 
+       if (best_pair.i != best_pair.j) {
+          /* Pin the best pair at the front. The rest is sorted by rank. */
+-         SWAP(c->srcs[0], c->srcs[best_pair.i]);
+-         SWAP(c->srcs[1], c->srcs[best_pair.j]);
++         MESA_SWAP(c->srcs[0], c->srcs[best_pair.i]);
++         MESA_SWAP(c->srcs[1], c->srcs[best_pair.j]);
+          pinned = 2;
+       }
+    }
 diff --git a/godot-mesa/src/compiler/spirv/spirv_to_nir.c b/godot-mesa/src/compiler/spirv/spirv_to_nir.c
-index 6f87ff9..3684b32 100644
+index 7150419..61b0b7c 100644
 --- a/godot-mesa/src/compiler/spirv/spirv_to_nir.c
 +++ b/godot-mesa/src/compiler/spirv/spirv_to_nir.c
-@@ -39,6 +39,8 @@
+@@ -45,6 +45,8 @@
  
  #include <stdio.h>
  
 +#include "drivers/d3d12/d3d12_godot_nir_bridge.h"
 +
- #ifndef NDEBUG
- uint32_t mesa_spirv_debug = 0;
- 
-@@ -1121,6 +1123,7 @@ struct_member_decoration_cb(struct vtn_builder *b,
-    case SpvDecorationPerPrimitiveNV:
-    case SpvDecorationPerTaskNV:
-    case SpvDecorationPerViewNV:
-+   case SpvDecorationInvariant: /* Silence this one to avoid warning spam. */
-       break;
- 
-    case SpvDecorationSpecId:
-@@ -1129,7 +1132,6 @@ struct_member_decoration_cb(struct vtn_builder *b,
-    case SpvDecorationArrayStride:
-    case SpvDecorationGLSLShared:
-    case SpvDecorationGLSLPacked:
--   case SpvDecorationInvariant:
-    case SpvDecorationAliased:
-    case SpvDecorationConstant:
-    case SpvDecorationIndex:
-@@ -1942,7 +1944,7 @@ vtn_null_constant(struct vtn_builder *b, struct vtn_type *type)
+ #ifndef PATH_MAX
+ #define PATH_MAX 4096
+ #endif
+@@ -2481,7 +2483,7 @@ vtn_null_constant(struct vtn_builder *b, struct vtn_type *type)
  }
  
  static void
@@ -50,7 +97,7 @@ index 6f87ff9..3684b32 100644
                              ASSERTED int member,
                              const struct vtn_decoration *dec, void *data)
  {
-@@ -1950,13 +1952,8 @@ spec_constant_decoration_cb(struct vtn_builder *b, UNUSED struct vtn_value *val,
+@@ -2489,13 +2491,8 @@ spec_constant_decoration_cb(struct vtn_builder *b, UNUSED struct vtn_value *val,
     if (dec->decoration != SpvDecorationSpecId)
        return;
  
@@ -66,7 +113,7 @@ index 6f87ff9..3684b32 100644
  }
  
  static void
-@@ -1980,6 +1977,12 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
+@@ -2519,6 +2516,12 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
                      const uint32_t *w, unsigned count)
  {
     struct vtn_value *val = vtn_push_value(b, w[2], vtn_value_type_constant);
@@ -79,7 +126,7 @@ index 6f87ff9..3684b32 100644
     val->constant = rzalloc(b, nir_constant);
     switch (opcode) {
     case SpvOpConstantTrue:
-@@ -1997,7 +2000,7 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
+@@ -2536,7 +2539,7 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
  
        if (opcode == SpvOpSpecConstantTrue ||
            opcode == SpvOpSpecConstantFalse)
@@ -88,7 +135,7 @@ index 6f87ff9..3684b32 100644
  
        val->constant->values[0].b = u32val.u32 != 0;
        break;
-@@ -2028,11 +2031,10 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
+@@ -2567,14 +2570,12 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
  
        if (opcode == SpvOpSpecConstant)
           vtn_foreach_decoration(b, val, spec_constant_decoration_cb,
@@ -98,10 +145,14 @@ index 6f87ff9..3684b32 100644
     }
  
 -   case SpvOpSpecConstantComposite:
-    case SpvOpConstantComposite: {
-       unsigned elem_count = count - 3;
-       vtn_fail_if(elem_count != val->type->length,
-@@ -2080,218 +2082,6 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
+    case SpvOpConstantComposite:
+-   case SpvOpConstantCompositeReplicateEXT:
+-   case SpvOpSpecConstantCompositeReplicateEXT: {
++   case SpvOpConstantCompositeReplicateEXT: {
+       const unsigned elem_count =
+          val->type->base_type == vtn_base_type_cooperative_matrix ?
+          1 : val->type->length;
+@@ -2648,315 +2649,6 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
        break;
     }
  
@@ -110,6 +161,54 @@ index 6f87ff9..3684b32 100644
 -      vtn_foreach_decoration(b, val, spec_constant_decoration_cb, &u32op);
 -      SpvOp opcode = u32op.u32;
 -      switch (opcode) {
+-      case SpvOpBitcast: {
+-         struct vtn_value *src = &b->values[w[4]];
+-
+-         vtn_assert(src->value_type == vtn_value_type_constant ||
+-                    src->value_type == vtn_value_type_undef);
+-
+-         unsigned src_len = glsl_get_vector_elements(src->type->type);
+-         unsigned dst_len = glsl_get_vector_elements(val->type->type);
+-
+-         unsigned src_bit_size = glsl_get_bit_size(src->type->type);
+-         unsigned dst_bit_size = glsl_get_bit_size(val->type->type);
+-
+-         vtn_assert(src_len * src_bit_size == dst_len * dst_bit_size);
+-
+-         /* This will end up being zero */
+-         if (src->value_type == vtn_value_type_undef)
+-            break;
+-
+-         if (src_bit_size == dst_bit_size) {
+-            /* This is just a copy */
+-            for (unsigned i = 0; i < src_len; i++)
+-               val->constant->values[i] = src->constant->values[i];
+-         } else {
+-            /* You can't non-trivially bitcast booleans */
+-            vtn_assert(src_bit_size >= 8 && dst_bit_size >= 8);
+-            const unsigned src_byte_size = src_bit_size / 8;
+-            const unsigned dst_byte_size = dst_bit_size / 8;
+-
+-            vtn_assert(src_len <= NIR_MAX_VEC_COMPONENTS &&
+-                       dst_len <= NIR_MAX_VEC_COMPONENTS);
+-
+-            uint8_t bits[NIR_MAX_VEC_COMPONENTS * sizeof(nir_const_value)];
+-
+-            for (unsigned i = 0; i < src_len; i++) {
+-               uint64_t v = nir_const_value_as_int(src->constant->values[i],
+-                                                   src_bit_size);
+-               memcpy(bits + i * src_byte_size, &v, src_byte_size);
+-            }
+-
+-            for (unsigned i = 0; i < dst_len; i++) {
+-               uint64_t v = 0;
+-               memcpy(&v, bits + i * dst_byte_size, dst_byte_size);
+-               val->constant->values[i] =
+-                  nir_const_value_for_uint(v, dst_bit_size);
+-            }
+-         }
+-         break;
+-      }
 -      case SpvOpVectorShuffle: {
 -         struct vtn_value *v0 = &b->values[w[4]];
 -         struct vtn_value *v1 = &b->values[w[5]];
@@ -172,39 +271,45 @@ index 6f87ff9..3684b32 100644
 -         } else {
 -            comp = vtn_value(b, w[5], vtn_value_type_constant);
 -            deref_start = 6;
--            val->constant = nir_constant_clone(comp->constant,
--                                               (nir_variable *)b);
+-            val->constant = nir_constant_clone(comp->constant, b->shader);
 -            c = &val->constant;
 -         }
 -
 -         int elem = -1;
 -         const struct vtn_type *type = comp->type;
 -         for (unsigned i = deref_start; i < count; i++) {
--            vtn_fail_if(w[i] > type->length,
--                        "%uth index of %s is %u but the type has only "
--                        "%u elements", i - deref_start,
--                        spirv_op_to_string(opcode), w[i], type->length);
+-            if (type->base_type == vtn_base_type_cooperative_matrix) {
+-               /* Cooperative matrices are always scalar constants.  We don't
+-                * care about the index w[i] because it's always replicated.
+-                */
+-               type = type->component_type;
+-            } else {
+-               vtn_fail_if(w[i] > type->length,
+-                           "%uth index of %s is %u but the type has only "
+-                           "%u elements", i - deref_start,
+-                           spirv_op_to_string(opcode), w[i], type->length);
 -
--            switch (type->base_type) {
--            case vtn_base_type_vector:
--               elem = w[i];
--               type = type->array_element;
--               break;
+-               switch (type->base_type) {
+-               case vtn_base_type_vector:
+-                  elem = w[i];
+-                  type = type->array_element;
+-                  break;
 -
--            case vtn_base_type_matrix:
--            case vtn_base_type_array:
--               c = &(*c)->elements[w[i]];
--               type = type->array_element;
--               break;
+-               case vtn_base_type_matrix:
+-               case vtn_base_type_array:
+-                  c = &(*c)->elements[w[i]];
+-                  type = type->array_element;
+-                  break;
 -
--            case vtn_base_type_struct:
--               c = &(*c)->elements[w[i]];
--               type = type->members[w[i]];
--               break;
+-               case vtn_base_type_struct:
+-                  c = &(*c)->elements[w[i]];
+-                  type = type->members[w[i]];
+-                  break;
 -
--            default:
--               vtn_fail("%s must only index into composite types",
--                        spirv_op_to_string(opcode));
+-               default:
+-                  vtn_fail("%s must only index into composite types",
+-                           spirv_op_to_string(opcode));
+-               }
 -            }
 -         }
 -
@@ -233,10 +338,12 @@ index 6f87ff9..3684b32 100644
 -
 -      default: {
 -         bool swap;
--         nir_alu_type dst_alu_type = nir_get_nir_type_for_glsl_type(val->type->type);
--         nir_alu_type src_alu_type = dst_alu_type;
+-
+-         const glsl_type *org_dst_type = val->type->type;
+-         const glsl_type *org_src_type = org_dst_type;
+-
+-         const bool saturate = vtn_has_decoration(b, val, SpvDecorationSaturatedToLargestFloat8NormalConversionEXT);
 -         unsigned num_components = glsl_get_vector_elements(val->type->type);
--         unsigned bit_size;
 -
 -         vtn_assert(count <= 7);
 -
@@ -244,26 +351,31 @@ index 6f87ff9..3684b32 100644
 -         case SpvOpSConvert:
 -         case SpvOpFConvert:
 -         case SpvOpUConvert:
--            /* We have a source in a conversion */
--            src_alu_type =
--               nir_get_nir_type_for_glsl_type(vtn_get_value_type(b, w[4])->type);
--            /* We use the bitsize of the conversion source to evaluate the opcode later */
--            bit_size = glsl_get_bit_size(vtn_get_value_type(b, w[4])->type);
+-            /* We have a different source type in a conversion. */
+-            org_src_type = vtn_get_value_type(b, w[4])->type;
 -            break;
 -         default:
--            bit_size = glsl_get_bit_size(val->type->type);
+-            break;
 -         };
+-
+-         const glsl_type *dst_type = org_dst_type;
+-         if (glsl_type_is_bfloat_16(dst_type) || glsl_type_is_e4m3fn(dst_type) || glsl_type_is_e5m2(dst_type))
+-            dst_type = glsl_float_type();
+-
+-         const glsl_type *src_type = org_src_type;
+-         if (glsl_type_is_bfloat_16(src_type) || glsl_type_is_e4m3fn(src_type) || glsl_type_is_e5m2(src_type))
+-            src_type = glsl_float_type();
 -
 -         bool exact;
 -         nir_op op = vtn_nir_alu_op_for_spirv_opcode(b, opcode, &swap, &exact,
--                                                     nir_alu_type_get_type_size(src_alu_type),
--                                                     nir_alu_type_get_type_size(dst_alu_type));
+-                                                     src_type, dst_type);
 -
 -         /* No SPIR-V opcodes handled through this path should set exact.
 -          * Since it is ignored, assert on it.
 -          */
 -         assert(!exact);
 -
+-         unsigned bit_size = glsl_get_bit_size(dst_type);
 -         nir_const_value src[3][NIR_MAX_VEC_COMPONENTS];
 -
 -         for (unsigned i = 0; i < count - 4; i++) {
@@ -273,16 +385,30 @@ index 6f87ff9..3684b32 100644
 -            /* If this is an unsized source, pull the bit size from the
 -             * source; otherwise, we'll use the bit size from the destination.
 -             */
--            if (!nir_alu_type_get_type_size(nir_op_infos[op].input_types[i]))
--               bit_size = glsl_get_bit_size(src_val->type->type);
+-            if (!nir_alu_type_get_type_size(nir_op_infos[op].input_types[i])) {
+-               if (org_src_type != src_type) {
+-                  /* Small float conversion. */
+-                  assert(i == 0);
+-                  bit_size = glsl_get_bit_size(src_type);
+-               } else {
+-                  bit_size = glsl_get_bit_size(src_val->type->type);
+-               }
+-            }
 -
 -            unsigned src_comps = nir_op_infos[op].input_sizes[i] ?
 -                                 nir_op_infos[op].input_sizes[i] :
 -                                 num_components;
 -
 -            unsigned j = swap ? 1 - i : i;
--            for (unsigned c = 0; c < src_comps; c++)
+-            for (unsigned c = 0; c < src_comps; c++) {
 -               src[j][c] = src_val->constant->values[c];
+-               if (glsl_type_is_bfloat_16(org_src_type))
+-                  src[j][c].f32 = _mesa_bfloat16_bits_to_float(src[j][c].u16);
+-               else if (glsl_type_is_e4m3fn(org_src_type))
+-                  src[j][c].f32 = _mesa_e4m3fn_to_float(src[j][c].u8);
+-               else if (glsl_type_is_e5m2(org_src_type))
+-                  src[j][c].f32 = _mesa_e5m2_to_float(src[j][c].u8);
+-            }
 -         }
 -
 -         /* fix up fixed size sources */
@@ -311,6 +437,28 @@ index 6f87ff9..3684b32 100644
 -         nir_eval_const_opcode(op, val->constant->values,
 -                               num_components, bit_size, srcs,
 -                               b->shader->info.float_controls_execution_mode);
+-
+-         for (int i = 0; i < num_components; i++) {
+-            uint16_t conv;
+-            if (glsl_type_is_bfloat_16(org_dst_type)) {
+-               conv = _mesa_float_to_bfloat16_bits_rte(val->constant->values[i].f32);
+-            } else if (glsl_type_is_e4m3fn(org_dst_type)) {
+-               if (saturate)
+-                  conv = _mesa_float_to_e4m3fn_sat(val->constant->values[i].f32);
+-               else
+-                  conv = _mesa_float_to_e4m3fn(val->constant->values[i].f32);
+-            } else if (glsl_type_is_e5m2(org_dst_type)) {
+-               if (saturate)
+-                  conv = _mesa_float_to_e5m2_sat(val->constant->values[i].f32);
+-               else
+-                  conv = _mesa_float_to_e5m2(val->constant->values[i].f32);
+-            } else {
+-               continue;
+-            }
+-
+-            val->constant->values[i] = nir_const_value_for_raw_uint(conv, glsl_get_bit_size(org_dst_type));
+-         }
+-
 -         break;
 -      } /* default */
 -      }
@@ -320,7 +468,7 @@ index 6f87ff9..3684b32 100644
     case SpvOpConstantNull:
        val->constant = vtn_null_constant(b, val->type);
        val->is_null_constant = true;
-@@ -6393,6 +6183,93 @@ vtn_handle_body_instruction(struct vtn_builder *b, SpvOp opcode,
+@@ -7018,6 +6710,93 @@ vtn_handle_body_instruction(struct vtn_builder *b, SpvOp opcode,
     return true;
  }
  
@@ -351,8 +499,8 @@ index 6f87ff9..3684b32 100644
 +      val->value_type = vtn_value_type_ssa;
 +      val->ssa = vtn_create_ssa_value(b, val->type->type);
 +
-+      nir_ssa_def *sc_imm = nir_imm_int(&b->nb, GODOT_NIR_SC_SENTINEL_MAGIC | val->sc_id);
-+      nir_ssa_def *non_opt_const = nir_build_load_constant_non_opt(&b->nb, 1, 32, sc_imm);
++      nir_def *sc_imm = nir_imm_int(&b->nb, GODOT_NIR_SC_SENTINEL_MAGIC | val->sc_id);
++      nir_def *non_opt_const = nir_load_constant_non_opt(&b->nb, 1, 32, sc_imm);
 +
 +      vtn_assert(b->nb.cursor.option == nir_cursor_after_instr);
 +      vtn_assert(b->nb.cursor.instr->type == nir_instr_type_intrinsic);
@@ -414,7 +562,7 @@ index 6f87ff9..3684b32 100644
  static bool
  is_glslang(const struct vtn_builder *b)
  {
-@@ -6632,6 +6509,8 @@ spirv_to_nir(const uint32_t *words, size_t word_count,
+@@ -7376,6 +7155,8 @@ spirv_to_nir(const uint32_t *words, size_t word_count,
     /* Skip the SPIR-V header, handled at vtn_create_builder */
     words+= 5;
  
@@ -423,20 +571,20 @@ index 6f87ff9..3684b32 100644
     /* Handle all the preamble instructions */
     words = vtn_foreach_instruction(b, words, word_end,
                                     vtn_handle_preamble_instruction);
-@@ -6713,7 +6592,7 @@ spirv_to_nir(const uint32_t *words, size_t word_count,
+@@ -7461,7 +7242,7 @@ spirv_to_nir(const uint32_t *words, size_t word_count,
+       vtn_foreach_function(func, &b->functions) {
           if ((options->create_library || func->referenced) && !func->emitted) {
-             b->const_table = _mesa_pointer_hash_table_create(b);
- 
+             _mesa_hash_table_clear(b->strings, NULL);
 -            vtn_function_emit(b, func, vtn_handle_body_instruction);
 +            vtn_function_emit(b, func, vtn_handle_spec_constant_instructions, preamble_words, vtn_handle_body_instruction);
              progress = true;
           }
        }
 diff --git a/godot-mesa/src/compiler/spirv/vtn_cfg.c b/godot-mesa/src/compiler/spirv/vtn_cfg.c
-index b02c11b..7d0c647 100644
+index 83d3228..78aee17 100644
 --- a/godot-mesa/src/compiler/spirv/vtn_cfg.c
 +++ b/godot-mesa/src/compiler/spirv/vtn_cfg.c
-@@ -1425,6 +1425,8 @@ vtn_emit_cf_func_unstructured(struct vtn_builder *b, struct vtn_function *func,
+@@ -763,6 +763,8 @@ vtn_emit_cf_func_unstructured(struct vtn_builder *b, struct vtn_function *func,
  
  void
  vtn_function_emit(struct vtn_builder *b, struct vtn_function *func,
@@ -445,7 +593,7 @@ index b02c11b..7d0c647 100644
                    vtn_instruction_handler instruction_handler)
  {
     static int force_unstructured = -1;
-@@ -1440,6 +1442,9 @@ vtn_function_emit(struct vtn_builder *b, struct vtn_function *func,
+@@ -777,6 +779,9 @@ vtn_function_emit(struct vtn_builder *b, struct vtn_function *func,
     b->nb.exact = b->exact;
     b->phi_table = _mesa_pointer_hash_table_create(b);
  
@@ -456,10 +604,10 @@ index b02c11b..7d0c647 100644
        impl->structured = false;
        vtn_emit_cf_func_unstructured(b, func, instruction_handler);
 diff --git a/godot-mesa/src/compiler/spirv/vtn_private.h b/godot-mesa/src/compiler/spirv/vtn_private.h
-index b1ec64d..1bdb3c8 100644
+index 5d601f9..4ab1a22 100644
 --- a/godot-mesa/src/compiler/spirv/vtn_private.h
 +++ b/godot-mesa/src/compiler/spirv/vtn_private.h
-@@ -307,6 +307,8 @@ typedef bool (*vtn_instruction_handler)(struct vtn_builder *, SpvOp,
+@@ -243,6 +243,8 @@ typedef bool (*vtn_instruction_handler)(struct vtn_builder *, SpvOp,
  void vtn_build_cfg(struct vtn_builder *b, const uint32_t *words,
                     const uint32_t *end);
  void vtn_function_emit(struct vtn_builder *b, struct vtn_function *func,
@@ -468,7 +616,7 @@ index b1ec64d..1bdb3c8 100644
                         vtn_instruction_handler instruction_handler);
  void vtn_handle_function_call(struct vtn_builder *b, SpvOp opcode,
                                const uint32_t *w, unsigned count);
-@@ -563,6 +565,8 @@ struct vtn_variable {
+@@ -521,6 +523,8 @@ struct vtn_variable {
     unsigned descriptor_set;
     unsigned binding;
     bool explicit_binding;
@@ -477,7 +625,7 @@ index b1ec64d..1bdb3c8 100644
     unsigned offset;
     unsigned input_attachment_index;
  
-@@ -633,6 +637,9 @@ struct vtn_value {
+@@ -594,6 +598,9 @@ struct vtn_value {
        struct vtn_ssa_value *ssa;
        vtn_instruction_handler ext_handler;
     };
@@ -488,7 +636,7 @@ index b1ec64d..1bdb3c8 100644
  
  #define VTN_DEC_DECORATION -1
 diff --git a/godot-mesa/src/compiler/spirv/vtn_variables.c b/godot-mesa/src/compiler/spirv/vtn_variables.c
-index 8db61c8..8545903 100644
+index 55557e7..16866df 100644
 --- a/godot-mesa/src/compiler/spirv/vtn_variables.c
 +++ b/godot-mesa/src/compiler/spirv/vtn_variables.c
 @@ -26,6 +26,8 @@
@@ -500,7 +648,7 @@ index 8db61c8..8545903 100644
  static struct vtn_pointer*
  vtn_align_pointer(struct vtn_builder *b, struct vtn_pointer *ptr,
                    unsigned alignment)
-@@ -1407,13 +1409,17 @@ var_decoration_cb(struct vtn_builder *b, struct vtn_value *val, int member,
+@@ -1620,13 +1622,17 @@ var_decoration_cb(struct vtn_builder *b, struct vtn_value *val, int member,
  
     /* Handle decorations that apply to a vtn_variable as a whole */
     switch (dec->decoration) {
@@ -523,10 +671,10 @@ index 8db61c8..8545903 100644
        vtn_var->input_attachment_index = dec->operands[0];
        vtn_var->access |= ACCESS_NON_WRITEABLE;
 diff --git a/godot-mesa/src/microsoft/compiler/dxil_container.c b/godot-mesa/src/microsoft/compiler/dxil_container.c
-index 2099734..487cda7 100644
+index 77a14cd..24d8362 100644
 --- a/godot-mesa/src/microsoft/compiler/dxil_container.c
 +++ b/godot-mesa/src/microsoft/compiler/dxil_container.c
-@@ -338,7 +338,8 @@ dxil_container_add_state_validation(struct dxil_container *c,
+@@ -331,7 +331,8 @@ dxil_container_add_state_validation(struct dxil_container *c,
  
  bool
  dxil_container_add_module(struct dxil_container *c,
@@ -536,7 +684,7 @@ index 2099734..487cda7 100644
  {
     assert(m->buf.buf_bits == 0); // make sure the module is fully flushed
     uint32_t version = (m->shader_kind << 16) |
-@@ -352,18 +353,22 @@ dxil_container_add_module(struct dxil_container *c,
+@@ -345,18 +346,22 @@ dxil_container_add_module(struct dxil_container *c,
     uint32_t bitcode_offset = 16;
     uint32_t bitcode_size = m->buf.blob.size;
  
@@ -563,7 +711,7 @@ index 2099734..487cda7 100644
  {
     assert(blob->size == 0);
     if (!blob_write_bytes(blob, &DXIL_DXBC, sizeof(DXIL_DXBC)))
-@@ -394,8 +399,12 @@ dxil_container_write(struct dxil_container *c, struct blob *blob)
+@@ -387,8 +392,12 @@ dxil_container_write(struct dxil_container *c, struct blob *blob)
     }
  
     if (!blob_write_bytes(blob, &c->num_parts, sizeof(c->num_parts)) ||
@@ -579,7 +727,7 @@ index 2099734..487cda7 100644
  
     return true;
 diff --git a/godot-mesa/src/microsoft/compiler/dxil_container.h b/godot-mesa/src/microsoft/compiler/dxil_container.h
-index b3279ee..08ab970 100644
+index 2c3f17c..3eb684f 100644
 --- a/godot-mesa/src/microsoft/compiler/dxil_container.h
 +++ b/godot-mesa/src/microsoft/compiler/dxil_container.h
 @@ -123,10 +123,11 @@ dxil_container_add_state_validation(struct dxil_container *c,
@@ -597,7 +745,7 @@ index b3279ee..08ab970 100644
  #ifdef __cplusplus
  }
 diff --git a/godot-mesa/src/microsoft/compiler/dxil_module.c b/godot-mesa/src/microsoft/compiler/dxil_module.c
-index 773e564..57b6a62 100644
+index c70c67c..0634b52 100644
 --- a/godot-mesa/src/microsoft/compiler/dxil_module.c
 +++ b/godot-mesa/src/microsoft/compiler/dxil_module.c
 @@ -32,6 +32,8 @@
@@ -609,7 +757,7 @@ index 773e564..57b6a62 100644
  void
  dxil_module_init(struct dxil_module *m, void *ralloc_ctx)
  {
-@@ -2630,6 +2632,12 @@ emit_consts(struct dxil_module *m)
+@@ -2669,6 +2671,12 @@ emit_consts(struct dxil_module *m)
           continue;
        }
  
@@ -623,7 +771,7 @@ index 773e564..57b6a62 100644
        case TYPE_INTEGER:
           if (!emit_int_value(m, c->int_value))
 diff --git a/godot-mesa/src/microsoft/compiler/dxil_module.h b/godot-mesa/src/microsoft/compiler/dxil_module.h
-index ca170c5..7fab628 100644
+index 08ba263..d4c412d 100644
 --- a/godot-mesa/src/microsoft/compiler/dxil_module.h
 +++ b/godot-mesa/src/microsoft/compiler/dxil_module.h
 @@ -29,6 +29,8 @@
@@ -635,7 +783,7 @@ index ca170c5..7fab628 100644
  #ifdef __cplusplus
  extern "C" {
  #endif
-@@ -247,6 +249,8 @@ struct dxil_module {
+@@ -268,6 +270,8 @@ struct dxil_module {
     struct rb_tree *functions;
  
     struct dxil_func_def *cur_emitting_func;
@@ -645,10 +793,10 @@ index ca170c5..7fab628 100644
  
  struct dxil_instr;
 diff --git a/godot-mesa/src/microsoft/compiler/nir_to_dxil.c b/godot-mesa/src/microsoft/compiler/nir_to_dxil.c
-index c4de9dd..3c0223f 100644
+index f99cf69..fa5bec7 100644
 --- a/godot-mesa/src/microsoft/compiler/nir_to_dxil.c
 +++ b/godot-mesa/src/microsoft/compiler/nir_to_dxil.c
-@@ -43,6 +43,8 @@
+@@ -44,6 +44,8 @@
  
  #include <stdint.h>
  
@@ -657,7 +805,7 @@ index c4de9dd..3c0223f 100644
  int debug_dxil = 0;
  
  static const struct debug_named_value
-@@ -1154,6 +1156,8 @@ add_resource(struct ntd_context *ctx, enum dxil_resource_type type,
+@@ -1226,6 +1228,8 @@ add_resource(struct ntd_context *ctx, enum dxil_resource_type type,
        /* No flags supported yet */
        resource_v1->resource_flags = 0;
     }
@@ -666,20 +814,20 @@ index c4de9dd..3c0223f 100644
  }
  
  static const struct dxil_value *
-@@ -5091,6 +5095,12 @@ emit_intrinsic(struct ntd_context *ctx, nir_intrinsic_instr *intr)
-    case nir_intrinsic_exclusive_scan:
-       return emit_reduce(ctx, intr);
+@@ -4963,6 +4967,12 @@ emit_intrinsic(struct ntd_context *ctx, nir_intrinsic_instr *intr)
+       return emit_load_unary_external_function(ctx, intr, "dx.op.startInstanceLocation",
+                                                DXIL_INTR_START_INSTANCE_LOCATION, nir_type_int);
  
 +   case nir_intrinsic_load_constant_non_opt: {
 +      const struct dxil_value* value = get_src(ctx, &intr->src[0], 0, nir_type_uint);
-+      store_dest_value(ctx, &intr->dest, 0, value);
++      store_def(ctx, &intr->def, 0, value);
 +      return true;
 +   }
 +
     case nir_intrinsic_load_num_workgroups:
     case nir_intrinsic_load_workgroup_size:
     default:
-@@ -6656,6 +6666,7 @@ nir_to_dxil(struct nir_shader *s, const struct nir_to_dxil_options *opts,
+@@ -6618,6 +6628,7 @@ nir_to_dxil(struct nir_shader *s, const struct nir_to_dxil_options *opts,
        MIN2(opts->shader_model_max & 0xffff, validator_version & 0xffff);
     ctx->mod.major_validator = validator_version >> 16;
     ctx->mod.minor_validator = validator_version & 0xffff;
@@ -687,7 +835,7 @@ index c4de9dd..3c0223f 100644
  
     if (s->info.stage <= MESA_SHADER_FRAGMENT) {
        uint64_t in_mask =
-@@ -6774,19 +6785,23 @@ nir_to_dxil(struct nir_shader *s, const struct nir_to_dxil_options *opts,
+@@ -6773,19 +6784,23 @@ nir_to_dxil(struct nir_shader *s, const struct nir_to_dxil_options *opts,
        goto out;
     }
  
@@ -714,7 +862,7 @@ index c4de9dd..3c0223f 100644
        static int shader_id = 0;
        char buffer[64];
 diff --git a/godot-mesa/src/microsoft/compiler/nir_to_dxil.h b/godot-mesa/src/microsoft/compiler/nir_to_dxil.h
-index bdfbe23..b95ca1d 100644
+index 9890115..abe9e9d 100644
 --- a/godot-mesa/src/microsoft/compiler/nir_to_dxil.h
 +++ b/godot-mesa/src/microsoft/compiler/nir_to_dxil.h
 @@ -29,6 +29,8 @@
@@ -735,13 +883,13 @@ index bdfbe23..b95ca1d 100644
  
  typedef void (*dxil_msg_callback)(void *priv, const char *msg);
 diff --git a/godot-mesa/src/microsoft/spirv_to_dxil/dxil_spirv_nir.c b/godot-mesa/src/microsoft/spirv_to_dxil/dxil_spirv_nir.c
-index 43de965..8965ecc 100644
+index 66a996e..4d8eff1 100644
 --- a/godot-mesa/src/microsoft/spirv_to_dxil/dxil_spirv_nir.c
 +++ b/godot-mesa/src/microsoft/spirv_to_dxil/dxil_spirv_nir.c
-@@ -1068,28 +1068,7 @@ dxil_spirv_nir_passes(nir_shader *nir,
-    NIR_PASS_V(nir, nir_lower_alu_to_scalar, NULL, NULL);
-    NIR_PASS_V(nir, nir_opt_dce);
-    NIR_PASS_V(nir, dxil_nir_lower_double_math);
+@@ -1058,30 +1058,7 @@ dxil_spirv_nir_passes(nir_shader *nir,
+    NIR_PASS(_, nir, nir_lower_alu_to_scalar, NULL, NULL);
+    NIR_PASS(_, nir, nir_opt_dce);
+    NIR_PASS(_, nir, dxil_nir_lower_double_math);
 -
 -   {
 -      bool progress;
@@ -755,21 +903,23 @@ index 43de965..8965ecc 100644
 -         NIR_PASS(progress, nir, nir_opt_undef);
 -         NIR_PASS(progress, nir, nir_opt_constant_folding);
 -         NIR_PASS(progress, nir, nir_opt_cse);
--         if (nir_opt_trivial_continues(nir)) {
+-         if (nir_opt_loop(nir)) {
 -            progress = true;
 -            NIR_PASS(progress, nir, nir_copy_prop);
 -            NIR_PASS(progress, nir, nir_opt_dce);
 -         }
 -         NIR_PASS(progress, nir, nir_lower_vars_to_ssa);
 -         NIR_PASS(progress, nir, nir_opt_algebraic);
+-         NIR_PASS(progress, nir, nir_opt_dead_cf);
+-         NIR_PASS(progress, nir, nir_opt_remove_phis);
 -      } while (progress);
 -   }
-+   NIR_PASS_V(nir, nir_lower_vars_to_ssa);
++   NIR_PASS(_, nir, nir_lower_vars_to_ssa);
  
-    if (conf->declared_read_only_images_as_srvs)
-       NIR_PASS_V(nir, nir_lower_readonly_images_to_tex, true);
+    NIR_PASS(_, nir, nir_remove_dead_variables, nir_var_function_temp, NULL);
+    NIR_PASS(_, nir, nir_split_struct_vars, nir_var_function_temp);
 diff --git a/godot-mesa/src/microsoft/spirv_to_dxil/spirv_to_dxil.c b/godot-mesa/src/microsoft/spirv_to_dxil/spirv_to_dxil.c
-index 76cf6b0..819339a 100644
+index 1a8e6e2..1b3b9d3 100644
 --- a/godot-mesa/src/microsoft/spirv_to_dxil/spirv_to_dxil.c
 +++ b/godot-mesa/src/microsoft/spirv_to_dxil/spirv_to_dxil.c
 @@ -32,6 +32,8 @@
@@ -778,9 +928,9 @@ index 76cf6b0..819339a 100644
  
 +#include "drivers/d3d12/d3d12_godot_nir_bridge.h"
 +
- static_assert(DXIL_SPIRV_SHADER_NONE == (int)MESA_SHADER_NONE, "must match");
- static_assert(DXIL_SPIRV_SHADER_VERTEX == (int)MESA_SHADER_VERTEX, "must match");
- static_assert(DXIL_SPIRV_SHADER_TESS_CTRL == (int)MESA_SHADER_TESS_CTRL, "must match");
+ static_assert((mesa_shader_stage)DXIL_SPIRV_SHADER_NONE == MESA_SHADER_NONE, "must match");
+ static_assert((mesa_shader_stage)DXIL_SPIRV_SHADER_VERTEX == MESA_SHADER_VERTEX, "must match");
+ static_assert((mesa_shader_stage)DXIL_SPIRV_SHADER_TESS_CTRL == MESA_SHADER_TESS_CTRL, "must match");
 @@ -50,6 +52,7 @@ spirv_to_dxil(const uint32_t *words, size_t word_count,
                const struct dxil_spirv_debug_options *dgb_opts,
                const struct dxil_spirv_runtime_conf *conf,
@@ -798,7 +948,7 @@ index 76cf6b0..819339a 100644
  
     const struct spirv_to_nir_options *spirv_opts = dxil_spirv_nir_get_spirv_options();
 diff --git a/godot-mesa/src/microsoft/spirv_to_dxil/spirv_to_dxil.h b/godot-mesa/src/microsoft/spirv_to_dxil/spirv_to_dxil.h
-index 40adf76..30efbd1 100644
+index 00b1884..0d10644 100644
 --- a/godot-mesa/src/microsoft/spirv_to_dxil/spirv_to_dxil.h
 +++ b/godot-mesa/src/microsoft/spirv_to_dxil/spirv_to_dxil.h
 @@ -30,6 +30,8 @@
@@ -810,7 +960,7 @@ index 40adf76..30efbd1 100644
  #ifdef __cplusplus
  extern "C" {
  #endif
-@@ -215,6 +217,7 @@ spirv_to_dxil(const uint32_t *words, size_t word_count,
+@@ -234,6 +236,7 @@ spirv_to_dxil(const uint32_t *words, size_t word_count,
                const struct dxil_spirv_debug_options *debug_options,
                const struct dxil_spirv_runtime_conf *conf,
                const struct dxil_spirv_logger *logger,
@@ -818,3 +968,37 @@ index 40adf76..30efbd1 100644
                struct dxil_spirv_object *out_dxil);
  
  /**
+diff --git a/godot-mesa/src/util/macros.h b/godot-mesa/src/util/macros.h
+index 0070067..72410ef 100644
+--- a/godot-mesa/src/util/macros.h
++++ b/godot-mesa/src/util/macros.h
+@@ -543,14 +543,14 @@ typedef int lock_cap_t;
+  * SWAP - swap value of @a and @b
+  */
+ #if !defined(_MSC_VER) || _MSC_VER >= 1939 /* MSVC 17.9 or later for __typeof__ */
+-#define SWAP(a, b)                                                             \
++#define MESA_SWAP(a, b)                                                        \
+    do {                                                                        \
+       __typeof__(a) __tmp = (a);                                               \
+       (a) = (b);                                                               \
+       (b) = __tmp;                                                             \
+    } while (0)
+ #else
+-#define SWAP(a, b)                                                             \
++#define MESA_SWAP(a, b)                                                        \
+    do {                                                                        \
+       /* NOLINTBEGIN(bugprone-sizeof-expression) */                            \
+       char __tmp[sizeof(a) == sizeof(b) ? (ptrdiff_t)sizeof(a) : -1];          \
+diff --git a/godot-mesa/src/util/set.c b/godot-mesa/src/util/set.c
+index d6c0623..1eac1e8 100644
+--- a/godot-mesa/src/util/set.c
++++ b/godot-mesa/src/util/set.c
+@@ -691,7 +691,7 @@ _mesa_set_intersects(struct set *a, struct set *b)
+ 
+    /* iterate over the set with less entries */
+    if (b->entries < a->entries) {
+-      SWAP(a, b);
++      MESA_SWAP(a, b);
+    }
+ 
+    set_foreach(a, entry) {
