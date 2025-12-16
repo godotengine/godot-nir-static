@@ -311,6 +311,7 @@ extra_defines += [
     "BLAKE3_NO_SSE41",
     "BLAKE3_NO_AVX2",
     "BLAKE3_NO_AVX512",
+    ("BLAKE3_USE_NEON", 0),
 ]
 
 if env.get("is_msvc", False):
