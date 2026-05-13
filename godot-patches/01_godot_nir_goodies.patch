@@ -870,7 +870,7 @@ index 08ba263..d4c412d 100644
  
  struct dxil_instr;
 diff --git a/godot-mesa/src/microsoft/compiler/nir_to_dxil.c b/godot-mesa/src/microsoft/compiler/nir_to_dxil.c
-index f99cf69..fa5bec7 100644
+index f99cf69..f1ed263 100644
 --- a/godot-mesa/src/microsoft/compiler/nir_to_dxil.c
 +++ b/godot-mesa/src/microsoft/compiler/nir_to_dxil.c
 @@ -44,6 +44,8 @@
@@ -891,6 +891,15 @@ index f99cf69..fa5bec7 100644
  }
  
  static const struct dxil_value *
+@@ -3103,7 +3107,7 @@ emit_barrier_impl(struct ntd_context *ctx, nir_variable_mode modes, mesa_scope e
+        (mem_scope > SCOPE_WORKGROUP || !is_compute)) {
+       flags |= DXIL_BARRIER_MODE_UAV_FENCE_GLOBAL;
+    } else {
+-      flags |= DXIL_BARRIER_MODE_UAV_FENCE_THREAD_GROUP;
++      flags |= DXIL_BARRIER_MODE_UAV_FENCE_GLOBAL;
+    }
+ 
+    if ((modes & nir_var_mem_shared) && is_compute)
 @@ -4963,6 +4967,12 @@ emit_intrinsic(struct ntd_context *ctx, nir_intrinsic_instr *intr)
        return emit_load_unary_external_function(ctx, intr, "dx.op.startInstanceLocation",
                                                 DXIL_INTR_START_INSTANCE_LOCATION, nir_type_int);
