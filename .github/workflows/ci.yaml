@@ -66,8 +66,7 @@ jobs:
           artifact-path: bin/libNIR.windows.x86_64.a
           flags: use_mingw=yes arch=x86_64
           mingw: yes
-          msys: mingw64
-          msysenv: x86_64
+          msysenv: x64
 
         - name: 🏁 Windows - MinGW/GCC (MSVCRT) x86_32
           platform: windows
@@ -76,7 +75,6 @@ jobs:
           artifact-path: bin/libNIR.windows.x86_32.a
           flags: use_mingw=yes arch=x86_32
           mingw: yes
-          msys: mingw32
           msysenv: i686
 
     runs-on: ${{ matrix.os }}
@@ -91,8 +89,7 @@ jobs:
         with:
           python-version: '3.x'
 
-      - name: Install SCons (Native env)
-        if: ${{ matrix.mingw != 'yes' }}
+      - name: Install SCons
         run: |
           python -m pip install scons==4.9.0
 
@@ -115,25 +112,23 @@ jobs:
 
       - name: Setup MinGW/MSYS2
         if: ${{ matrix.mingw == 'yes' }}
-        uses: msys2/setup-msys2@v2
+        uses: egor-tensin/setup-mingw@v3
         with:
-          update: true
-          msystem: ${{matrix.msys}}
-          install: mingw-w64-${{matrix.msysenv}}-gcc mingw-w64-${{matrix.msysenv}}-scons
+          version: 15.2.0
+          platform: ${{matrix.msysenv}}
+          cc: 1
 
       - name: Prepare Mesa source
         shell: bash
         run: |
           ./update_mesa.sh
 
-      - name: Build Mesa (Native env)
-        if: ${{ matrix.mingw != 'yes' }}
-        run: |
-          scons platform=${{ matrix.platform }} ${{ matrix.flags }} optimize=speed
-
-      - name: Build Mesa (MSYS2 env)
+      - name: GCC version
         if: ${{ matrix.mingw == 'yes' }}
-        shell: msys2 {0}
+        run: |
+          gcc --version
+
+      - name: Build Mesa
         run: |
           scons platform=${{ matrix.platform }} ${{ matrix.flags }} optimize=speed
 
