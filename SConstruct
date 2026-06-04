@@ -110,7 +110,24 @@ opts.Add(
         map=architecture_aliases,
     )
 )
+opts.Add(
+    BoolVariable(
+        key="platform_tools",
+        help="If true, auto detect platform build tools and override ones passed in via CC, CXX, RC, etc.",
+        default=False,
+    )
+)
 
+opts.Add("CXX", "C++ compiler binary")
+opts.Add("CC", "C compiler binary")
+opts.Add("LINK", "Linker binary")
+opts.Add("AS", "Assembler binary")
+opts.Add("AR", "Archiver binary")
+opts.Add("RANLIB", "Ranlib binary")
+opts.Add("RC", "Resource compiler binary")
+# Set this to something like "${TEMPFILE('$AR rcs $TARGET $SOURCES','$ARCOMSTR')}" if you get errors related to a command being too long. 
+# This is a common error on Windows machines.
+opts.Add("ARCOM", "Custom command used to generate an object file from an assembly-language source file.")
 opts.Add("cppdefines", "Custom defines for the pre-processor")
 opts.Add("ccflags", "Custom flags for both the C and C++ compilers")
 opts.Add("cxxflags", "Custom flags for the C++ compiler")
@@ -118,6 +135,7 @@ opts.Add("cflags", "Custom flags for the C compiler")
 opts.Add("linkflags", "Custom flags for the linker")
 opts.Add("extra_suffix", "Custom extra suffix added to the base filename of all generated binary files.", "")
 opts.Add(BoolVariable("use_asan", "Use address sanitizer (ASAN) in MSVC", False))
+opts.Add("import_env_vars", "A comma-separated list of environment variables to copy from the outer environment.", "")
 
 # Targets flags tool (optimizations, debug symbols)
 target_tool = Tool("targets", toolpath=["godot-tools"])
@@ -125,6 +143,12 @@ target_tool.options(opts)
 
 opts.Update(env)
 Help(opts.GenerateHelpText(env))
+
+# Copy custom environment variables if set.
+if env["import_env_vars"]:
+    for env_var in str(env["import_env_vars"]).split(","):
+        if env_var in os.environ:
+            env["ENV"][env_var] = os.environ[env_var]
 
 # Process CPU architecture argument.
 if env["arch"] == "":
