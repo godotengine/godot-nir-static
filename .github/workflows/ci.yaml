@@ -12,46 +12,49 @@ jobs:
       matrix:
         include:
         # MinGW/LLVM libs using UCRT
-        - name: 🏁 Windows - MinGW/LLVM (UCRT) x86_64
+        - name: 🏁 Windows - MinGW/LLVM 21.1.6 (UCRT) x86_64
           platform: windows
           os: windows-2022
           artifact-name: godot-nir-static-x86_64-llvm-release
           artifact-path: bin/libNIR.windows.x86_64.a
           flags: use_mingw=yes arch=x86_64 use_llvm=yes mingw_prefix=$HOME/llvm-mingw
+          mingw_version: 20251118/llvm-mingw-20251118-ucrt-x86_64
           llvm: yes
 
-        - name: 🏁 Windows - MinGW/LLVM (UCRT) x86_32
+        - name: 🏁 Windows - MinGW/LLVM 21.1.6 (UCRT) x86_32
           platform: windows
           os: windows-2022
           artifact-name: godot-nir-static-x86_32-llvm-release
           artifact-path: bin/libNIR.windows.x86_32.a
           flags: use_mingw=yes arch=x86_32 use_llvm=yes mingw_prefix=$HOME/llvm-mingw
+          mingw_version: 20251118/llvm-mingw-20251118-ucrt-x86_64
           llvm: yes
 
-        - name: 🏁 Windows - MinGW/LLVM (UCRT) arm64
+        - name: 🏁 Windows - MinGW/LLVM 21.1.6 (UCRT) arm64
           platform: windows
           os: windows-2022
           artifact-name: godot-nir-static-arm64-llvm-release
           artifact-path: bin/libNIR.windows.arm64.a
           flags: use_mingw=yes arch=arm64 use_llvm=yes mingw_prefix=$HOME/llvm-mingw
+          mingw_version: 20251118/llvm-mingw-20251118-ucrt-x86_64
           llvm: yes
 
         # MSVC libs
-        - name: 🏁 Windows - MSVC x86_64
+        - name: 🏁 Windows - MSVC 2022 x86_64
           platform: windows
           os: windows-2022
           artifact-name: godot-nir-static-x86_64-msvc-release
           artifact-path: bin/libNIR.windows.x86_64.lib
           flags: use_mingw=no arch=x86_64
 
-        - name: 🏁 Windows - MSVC x86_32
+        - name: 🏁 Windows - MSVC 2022 x86_32
           platform: windows
           os: windows-2022
           artifact-name: godot-nir-static-x86_32-msvc-release
           artifact-path: bin/libNIR.windows.x86_32.lib
           flags: use_mingw=no arch=x86_32
 
-        - name: 🏁 Windows - MSVC arm64
+        - name: 🏁 Windows - MSVC 2022 arm64
           platform: windows
           os: windows-2022
           artifact-name: godot-nir-static-arm64-msvc-release
@@ -59,23 +62,42 @@ jobs:
           flags: use_mingw=no arch=arm64
 
         # MinGW/GCC libs using MSVCRT
-        - name: 🏁 Windows - MinGW/GCC (MSVCRT) x86_64
+        - name: 🏁 Windows - MinGW/GCC 15.2 (MSVCRT) x86_64
           platform: windows
           os: windows-2022
           artifact-name: godot-nir-static-x86_64-gcc-release
           artifact-path: bin/libNIR.windows.x86_64.a
-          flags: use_mingw=yes arch=x86_64
+          flags: use_mingw=yes arch=x86_64 mingw_prefix=$HOME/gcc-mingw
+          mingw_version: 15.2.0posix-14.0.0-msvcrt-r7/winlibs-x86_64-posix-seh-gcc-15.2.0-mingw-w64msvcrt-14.0.0-r7
           mingw: yes
-          msysenv: x64
 
-        - name: 🏁 Windows - MinGW/GCC (MSVCRT) x86_32
+        - name: 🏁 Windows - MinGW/GCC 15.2 (MSVCRT) x86_32
           platform: windows
           os: windows-2022
           artifact-name: godot-nir-static-x86_32-gcc-release
           artifact-path: bin/libNIR.windows.x86_32.a
-          flags: use_mingw=yes arch=x86_32
+          flags: use_mingw=yes arch=x86_32 mingw_prefix=$HOME/gcc-mingw
+          mingw_version: 15.2.0posix-14.0.0-msvcrt-r7/winlibs-i686-posix-dwarf-gcc-15.2.0-mingw-w64msvcrt-14.0.0-r7
           mingw: yes
-          msysenv: i686
+
+        # MinGW/GCC libs using UCRT
+        - name: 🏁 Windows - MinGW/GCC 15.2 (UCRT) x86_64
+          platform: windows
+          os: windows-2022
+          artifact-name: godot-nir-static-x86_64-gcc-ucrt-release
+          artifact-path: bin/libNIR.windows.x86_64.a
+          flags: use_mingw=yes arch=x86_64 mingw_prefix=$HOME/gcc-mingw
+          mingw_version: 15.2.0posix-14.0.0-ucrt-r7/winlibs-x86_64-posix-seh-gcc-15.2.0-mingw-w64ucrt-14.0.0-r7
+          mingw: yes
+
+        - name: 🏁 Windows - MinGW/GCC 15.2 (UCRT) x86_32
+          platform: windows
+          os: windows-2022
+          artifact-name: godot-nir-static-x86_32-gcc-ucrt-release
+          artifact-path: bin/libNIR.windows.x86_32.a
+          flags: use_mingw=yes arch=x86_32 mingw_prefix=$HOME/gcc-mingw
+          mingw_version: 15.2.0posix-14.0.0-ucrt-r7/winlibs-i686-posix-dwarf-gcc-15.2.0-mingw-w64ucrt-14.0.0-r7
+          mingw: yes
 
     runs-on: ${{ matrix.os }}
 
@@ -104,29 +126,25 @@ jobs:
       - name: Setup MinGW/LLVM
         if: ${{ matrix.platform == 'windows' && matrix.llvm == 'yes' }}
         run: |
-          curl -L -O https://github.com/mstorsjo/llvm-mingw/releases/download/20240619/llvm-mingw-20240619-ucrt-x86_64.zip
+          curl -L -O https://github.com/mstorsjo/llvm-mingw/releases/download/${{matrix.mingw_version}}.zip
           unzip -q llvm-mingw-*.zip
           rm llvm-mingw-*.zip
           mv llvm-mingw-* "$HOME/llvm-mingw"
           echo "$HOME/llvm-mingw/bin" >> $GITHUB_PATH
 
-      - name: Setup MinGW/MSYS2
-        if: ${{ matrix.mingw == 'yes' }}
-        uses: egor-tensin/setup-mingw@v3
-        with:
-          version: 15.2.0
-          platform: ${{matrix.msysenv}}
-          cc: 1
+      - name: Setup MinGW/GCC
+        if: ${{ matrix.platform == 'windows' && matrix.mingw == 'yes' }}
+        run: |
+          curl -L -O https://github.com/brechtsanders/winlibs_mingw/releases/download/${{matrix.mingw_version}}.zip
+          unzip -q winlibs-*.zip
+          rm winlibs-*.zip
+          mv mingw* "$HOME/gcc-mingw"
+          echo "$HOME/gcc-mingw/bin" >> $GITHUB_PATH
 
       - name: Prepare Mesa source
         shell: bash
         run: |
           ./update_mesa.sh
-
-      - name: GCC version
-        if: ${{ matrix.mingw == 'yes' }}
-        run: |
-          gcc --version
 
       - name: Build Mesa
         run: |
